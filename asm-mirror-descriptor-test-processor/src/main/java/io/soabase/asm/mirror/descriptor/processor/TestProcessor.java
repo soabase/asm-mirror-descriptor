@@ -50,10 +50,10 @@ public class TestProcessor extends AbstractProcessor {
                     reader.accept(traceClassVisitor);
                     output.append(stringWriter.toString());
 
-                    try (Writer out = processingEnv.getFiler().createResource(StandardLocation.SOURCE_OUTPUT, "test", typeElement.getSimpleName().toString() + ".txt").openWriter()) {
+                    try (Writer out = processingEnv.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "test", typeElement.getSimpleName().toString() + ".txt").openWriter()) {
                         out.write(output.toString());
                     } catch (IOException e) {
-                        // TODO
+                        throw new RuntimeException(e);
                     }
                 }
             });

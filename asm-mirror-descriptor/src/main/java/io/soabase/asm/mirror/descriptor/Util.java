@@ -16,14 +16,12 @@
 package io.soabase.asm.mirror.descriptor;
 
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -40,7 +38,7 @@ public class Util {
         map.put(Modifier.PROTECTED, Opcodes.ACC_PROTECTED);
         map.put(Modifier.PRIVATE, Opcodes.ACC_PRIVATE);
         map.put(Modifier.ABSTRACT, Opcodes.ACC_ABSTRACT);
-        map.put(Modifier.DEFAULT, 0);   // TODO
+        map.put(Modifier.DEFAULT, 0);   // ???
         map.put(Modifier.STATIC, Opcodes.ACC_STATIC);
         map.put(Modifier.FINAL, Opcodes.ACC_FINAL);
         map.put(Modifier.TRANSIENT, Opcodes.ACC_TRANSIENT);
@@ -89,11 +87,18 @@ public class Util {
     public static boolean hasTypeArguments(Element element) {
         switch (element.getKind()) {
             case METHOD:
-            case CONSTRUCTOR:
+            case CONSTRUCTOR: {
                 return hasTypeArguments((ExecutableElement) element);
+            }
 
-            case PARAMETER:
+            case FIELD:
+            case PARAMETER: {
                 return hasTypeArguments(element.asType());
+            }
+
+            case CLASS: {
+                return hasTypeArguments((DeclaredType) element.asType());
+            }
 
             // TODO
         }
@@ -111,6 +116,9 @@ public class Util {
     }
 
     public static boolean hasTypeArguments(TypeMirror type) {
+        if (type.getKind() == TypeKind.TYPEVAR) {
+            return true;
+        }
         return (type.getKind() == TypeKind.DECLARED) && hasTypeArguments((DeclaredType) type);
     }
 

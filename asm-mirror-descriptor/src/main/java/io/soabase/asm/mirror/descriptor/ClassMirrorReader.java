@@ -18,11 +18,13 @@ package io.soabase.asm.mirror.descriptor;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
@@ -33,24 +35,32 @@ public class ClassMirrorReader {
     private final ProcessingEnvironment processingEnv;
     private final TypeElement mainElement;
     private final MirrorSignatureReader signatureReader;
+    private final int classVersion;
+    private final int extraAccessFlags;
 
     public ClassMirrorReader(ProcessingEnvironment processingEnv, DeclaredType mainElement) {
         this(processingEnv, (TypeElement) mainElement.asElement());
     }
 
     public ClassMirrorReader(ProcessingEnvironment processingEnv, TypeElement mainElement) {
+        this(processingEnv, mainElement, Opcodes.V1_8, Opcodes.ACC_SUPER);
+    }
+
+    public ClassMirrorReader(ProcessingEnvironment processingEnv, TypeElement mainElement, int classVersion, int extraAccessFlags) {
         this.processingEnv = processingEnv;
         this.mainElement = mainElement;
         signatureReader = new MirrorSignatureReader(processingEnv);
+        this.classVersion = classVersion;
+        this.extraAccessFlags = extraAccessFlags;
     }
 
     public void accept(ClassVisitor classVisitor) {
-        int accessFlags = Util.modifiersToAccessFlags(mainElement.getModifiers());
+        int accessFlags = Util.modifiersToAccessFlags(mainElement.getModifiers()) | extraAccessFlags;
         String thisClass = Util.toSlash(mainElement.getQualifiedName().toString());
         String superClass = getSuperClass();
         String[] interfaces = getInterfaces();
-        String signature = signatureReader.classSignature(mainElement.asType());
-        classVisitor.visit(0, accessFlags, thisClass, signature, superClass, interfaces);
+        String signature = Util.hasTypeArguments(mainElement) ? signatureReader.classSignature(mainElement.asType()) : null;
+        classVisitor.visit(classVersion, accessFlags, thisClass, signature, superClass, interfaces);
 
         mainElement.getEnclosedElements().forEach(enclosed -> {
             switch (enclosed.getKind()) {
@@ -76,15 +86,18 @@ public class ClassMirrorReader {
         TypeMirror[] parameters = method.getParameters().stream()
                 .map(VariableElement::asType)
                 .toArray(TypeMirror[]::new);
-        String descriptor = signatureReader.methodType(parameters, method.getReturnType(), DESCRIPTOR);
-        String signature = Util.hasTypeArguments(method) ? signatureReader.methodType(parameters, method.getReturnType(), SIGNATURE) : null;
+        TypeMirror[] typeParameters = method.getTypeParameters().stream()
+                .map(TypeParameterElement::asType)
+                .toArray(TypeMirror[]::new);
+        String descriptor = signatureReader.methodType(typeParameters, parameters, method.getReturnType(), DESCRIPTOR);
+        String signature = Util.hasTypeArguments(method) ? signatureReader.methodType(typeParameters, parameters, method.getReturnType(), SIGNATURE) : null;
         String[] exceptions = readExceptions(method);
         MethodVisitor methodVisitor = classVisitor.visitMethod(accessFlags, methodName, descriptor, signature, exceptions);
     }
 
     private String[] readExceptions(ExecutableElement method) {
         return method.getThrownTypes().stream()
-                .map(exceptionType -> signatureReader.type(exceptionType, UNTERMINATED_DESCRIPTOR))
+                .map(exceptionType -> signatureReader.type(exceptionType, DESCRIPTOR_UNTERMINATED))
                 .toArray(String[]::new);
     }
 
@@ -92,7 +105,7 @@ public class ClassMirrorReader {
         int accessFlags = Util.modifiersToAccessFlags(field.getModifiers());
         String name = field.getSimpleName().toString();
         String descriptor = signatureReader.type(field.asType(), DESCRIPTOR);
-        String signature = signatureReader.type(field.asType(), SIGNATURE);
+        String signature = Util.hasTypeArguments(field) ? signatureReader.type(field.asType(), SIGNATURE) : null;
         Object constantValue = field.getConstantValue();
         FieldVisitor fieldVisitor = classVisitor.visitField(accessFlags, name, descriptor, signature, constantValue);
     }
