@@ -27,33 +27,32 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 
-import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.DESCRIPTOR;
-import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.SIGNATURE;
+import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.*;
 
 public class ClassMirrorReader {
     private final ProcessingEnvironment processingEnv;
-    private final TypeElement type;
+    private final TypeElement mainElement;
     private final MirrorSignatureReader signatureReader;
 
-    public ClassMirrorReader(ProcessingEnvironment processingEnv, DeclaredType type) {
-        this(processingEnv, (TypeElement) type.asElement());
+    public ClassMirrorReader(ProcessingEnvironment processingEnv, DeclaredType mainElement) {
+        this(processingEnv, (TypeElement) mainElement.asElement());
     }
 
-    public ClassMirrorReader(ProcessingEnvironment processingEnv, TypeElement type) {
+    public ClassMirrorReader(ProcessingEnvironment processingEnv, TypeElement mainElement) {
         this.processingEnv = processingEnv;
-        this.type = type;
+        this.mainElement = mainElement;
         signatureReader = new MirrorSignatureReader(processingEnv);
     }
 
     public void accept(ClassVisitor classVisitor) {
-        int accessFlags = Util.modifiersToAccessFlags(type.getModifiers());
-        String thisClass = Util.toSlash(type.getQualifiedName().toString());
+        int accessFlags = Util.modifiersToAccessFlags(mainElement.getModifiers());
+        String thisClass = Util.toSlash(mainElement.getQualifiedName().toString());
         String superClass = getSuperClass();
         String[] interfaces = getInterfaces();
-        String signature = signatureReader.classSignature(type.asType());
+        String signature = signatureReader.classSignature(mainElement.asType());
         classVisitor.visit(0, accessFlags, thisClass, signature, superClass, interfaces);
 
-        type.getEnclosedElements().forEach(enclosed -> {
+        mainElement.getEnclosedElements().forEach(enclosed -> {
             switch (enclosed.getKind()) {
                 case FIELD: {
                     readField(classVisitor, (VariableElement) enclosed);
@@ -78,9 +77,15 @@ public class ClassMirrorReader {
                 .map(VariableElement::asType)
                 .toArray(TypeMirror[]::new);
         String descriptor = signatureReader.methodType(parameters, method.getReturnType(), DESCRIPTOR);
-        String signature = signatureReader.methodType(parameters, method.getReturnType(), SIGNATURE);
-        String[] exceptions = null;  // TODO
+        String signature = Util.hasTypeArguments(method) ? signatureReader.methodType(parameters, method.getReturnType(), SIGNATURE) : null;
+        String[] exceptions = readExceptions(method);
         MethodVisitor methodVisitor = classVisitor.visitMethod(accessFlags, methodName, descriptor, signature, exceptions);
+    }
+
+    private String[] readExceptions(ExecutableElement method) {
+        return method.getThrownTypes().stream()
+                .map(exceptionType -> signatureReader.type(exceptionType, UNTERMINATED_DESCRIPTOR))
+                .toArray(String[]::new);
     }
 
     private void readField(ClassVisitor classVisitor, VariableElement field) {
@@ -93,7 +98,7 @@ public class ClassMirrorReader {
     }
 
     private String[] getInterfaces() {
-        return type.getInterfaces().stream()
+        return mainElement.getInterfaces().stream()
                 .map(type -> {
                     Element element = ((DeclaredType) type).asElement();
                     return Util.toSlash(((TypeElement) element).getQualifiedName().toString());
@@ -102,7 +107,7 @@ public class ClassMirrorReader {
     }
 
     private String getSuperClass() {
-        Element element = ((DeclaredType) type.getSuperclass()).asElement();
+        Element element = ((DeclaredType) mainElement.getSuperclass()).asElement();
         if (Util.isObject(processingEnv, element)) {
             return null;
         }

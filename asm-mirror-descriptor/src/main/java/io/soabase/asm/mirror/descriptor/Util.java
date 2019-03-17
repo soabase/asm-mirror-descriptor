@@ -16,10 +16,14 @@
 package io.soabase.asm.mirror.descriptor;
 
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -78,12 +82,44 @@ public class Util {
         return baseTypes.get(kind);
     }
 
-    public static boolean isObject(ProcessingEnvironment processingEnv, TypeMirror type) {
-        return (type.getKind() == TypeKind.DECLARED) && isObject(processingEnv, ((DeclaredType) type).asElement());
-    }
-
     public static boolean isObject(ProcessingEnvironment processingEnv, Element element) {
         return processingEnv.getElementUtils().getTypeElement("java.lang.Object").equals(element);
+    }
+
+    public static boolean hasTypeArguments(Element element) {
+        switch (element.getKind()) {
+            case METHOD:
+            case CONSTRUCTOR:
+                return hasTypeArguments((ExecutableElement) element);
+
+            case PARAMETER:
+                return hasTypeArguments(element.asType());
+
+            // TODO
+        }
+        return false;
+    }
+
+    public static boolean hasTypeArguments(ExecutableElement element) {
+        if (!element.getTypeParameters().isEmpty()) {
+            return true;
+        }
+        if (hasTypeArguments(element.getReturnType())) {
+            return true;
+        }
+        return element.getParameters().stream().anyMatch(Util::hasTypeArguments);
+    }
+
+    public static boolean hasTypeArguments(TypeMirror type) {
+        return (type.getKind() == TypeKind.DECLARED) && hasTypeArguments((DeclaredType) type);
+    }
+
+    public static boolean hasTypeArguments(DeclaredType type) {
+        return !type.getTypeArguments().isEmpty();
+    }
+
+    public static boolean isInterface(TypeMirror type) {
+        return (type.getKind() == TypeKind.DECLARED) && (((DeclaredType) type).asElement().getKind() == ElementKind.INTERFACE);
     }
 
     private Util() {

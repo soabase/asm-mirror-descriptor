@@ -10,13 +10,28 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MirrorSignatureReader {
     private final ProcessingEnvironment processingEnv;
 
     public enum Mode {
+        UNTERMINATED_DESCRIPTOR,
         DESCRIPTOR,
         SIGNATURE
+    }
+
+    private static class SignatureContext {
+        final Set<TypeMirror> visitedTypes = new HashSet<>();
+
+        boolean checkVisited(ProcessingEnvironment processingEnv, TypeMirror type) {
+            if (visitedTypes.stream().anyMatch(t -> processingEnv.getTypeUtils().isSameType(t, type))) {
+                return false;
+            }
+            visitedTypes.add(type);
+            return true;
+        }
     }
 
     public MirrorSignatureReader(ProcessingEnvironment processingEnv) {
@@ -26,13 +41,14 @@ public class MirrorSignatureReader {
     public String classSignature(TypeMirror type) {
         if (type.getKind() == TypeKind.DECLARED) {
             DeclaredType declaredType = (DeclaredType) type;
-            if (!declaredType.getTypeArguments().isEmpty()) {
+            if (Util.hasTypeArguments(declaredType)) {
                 SignatureWriter writer = new SignatureWriter();
+                SignatureContext signatureContext = new SignatureContext();
                 for (TypeMirror typeArgument : declaredType.getTypeArguments()) {
-                    internalType(writer, typeArgument, Mode.SIGNATURE);
+                    internalType(writer, typeArgument, Mode.SIGNATURE, signatureContext);
                 }
                 writer.visitSuperclass();
-                internalType(writer, ((TypeElement) declaredType.asElement()).getSuperclass(), Mode.SIGNATURE);
+                internalType(writer, ((TypeElement) declaredType.asElement()).getSuperclass(), Mode.SIGNATURE, signatureContext);
                 return writer.toString();
             }
         }
@@ -60,48 +76,60 @@ public class MirrorSignatureReader {
 
     public String type(TypeMirror type, Mode mode) {
         SignatureWriter writer = new SignatureWriter();
-        internalType(writer, type, mode);
+        internalType(writer, type, mode, new SignatureContext());
         return writer.toString();
     }
 
     private void internalParametersType(SignatureWriter writer, TypeMirror[] parameters, Mode mode) {
+        SignatureContext signatureContext = new SignatureContext();
         for (TypeMirror parameter : parameters) {
             writer.visitParameterType();
-            internalType(writer, parameter, mode);
+            internalType(writer, parameter, mode, signatureContext);
         }
     }
 
     private void internalReturnType(SignatureWriter writer, TypeMirror type, Mode mode) {
         writer.visitReturnType();
-        internalType(writer, type, mode);
+        internalType(writer, type, mode, new SignatureContext());
     }
 
-    private void internalType(SignatureWriter writer, TypeMirror type, Mode mode) {
+    private void internalType(SignatureWriter writer, TypeMirror type, Mode mode, SignatureContext signatureContext) {
         Character baseType = Util.toBaseType(type.getKind());
         if (baseType != null) {
             writer.visitBaseType(baseType);
         } else {
-            buildType(writer, type, mode);
+            buildType(writer, type, mode, signatureContext);
         }
     }
 
-    private void buildType(SignatureWriter writer, TypeMirror type, Mode mode) {
-        if (mode == Mode.DESCRIPTOR) {
+    private void buildType(SignatureWriter writer, TypeMirror type, Mode mode, SignatureContext signatureContext) {
+        if (mode != Mode.SIGNATURE) {
             type = processingEnv.getTypeUtils().erasure(type);
         }
         switch (type.getKind()) {
             case ARRAY: {
                 ArrayType arrayType = (ArrayType) type;
                 writer.visitArrayType();
-                internalType(writer, arrayType.getComponentType(), mode);
+                internalType(writer, arrayType.getComponentType(), mode, signatureContext);
                 break;
             }
 
             case DECLARED: {
-                if (mode == Mode.SIGNATURE) {
-                    buildDeclaredTypeSignature(writer, type);
-                } else {
-                    buildDeclaredTypeDescriptor(writer, type);
+                switch (mode) {
+                    case UNTERMINATED_DESCRIPTOR: {
+                        writer.visitClassType(Util.toSlash(type.toString()));
+                        break;
+                    }
+
+                    case DESCRIPTOR: {
+                        buildDeclaredTypeDescriptor(writer, type);
+                        break;
+                    }
+
+                    case SIGNATURE: {
+                        buildDeclaredTypeSignature(writer, type, signatureContext);
+                        break;
+                    }
                 }
                 break;
             }
@@ -110,10 +138,17 @@ public class MirrorSignatureReader {
                 if (mode == Mode.SIGNATURE) {
                     TypeVariable typeVariable = (TypeVariable) type;
                     TypeParameterElement typeParameterElement = (TypeParameterElement) typeVariable.asElement();
-                    writer.visitFormalTypeParameter(typeParameterElement.getSimpleName().toString());
-                    internalType(writer, typeVariable.getUpperBound(), Mode.SIGNATURE);
-                    if (typeVariable.getLowerBound().getKind() != TypeKind.NULL) {
-                        // TODO
+                    if (signatureContext.checkVisited(processingEnv, typeVariable.getUpperBound())) {
+                        writer.visitFormalTypeParameter(typeParameterElement.getSimpleName().toString());
+                        if (Util.isInterface(typeVariable.getUpperBound())) {
+                            writer.visitInterfaceBound();
+                        }
+                        internalType(writer, typeVariable.getUpperBound(), Mode.SIGNATURE, signatureContext);
+                        if (typeVariable.getLowerBound().getKind() != TypeKind.NULL) {
+                            // TODO
+                        }
+                    } else {
+                        writer.visitTypeVariable(typeParameterElement.getSimpleName().toString());
                     }
                 }
                 break;
@@ -121,14 +156,14 @@ public class MirrorSignatureReader {
         }
     }
 
-    private void buildDeclaredTypeSignature(SignatureWriter writer, TypeMirror type) {
+    private void buildDeclaredTypeSignature(SignatureWriter writer, TypeMirror type, SignatureContext signatureContext) {
         DeclaredType declaredType = (DeclaredType) type;
         TypeMirror erasedType = processingEnv.getTypeUtils().erasure(type);
         writer.visitClassType(Util.toSlash(erasedType.toString()));
-        if (!declaredType.getTypeArguments().isEmpty()) {
+        if (Util.hasTypeArguments(declaredType)) {
             writer.visitTypeArgument('=');
             for (TypeMirror typeArgument : declaredType.getTypeArguments()) {
-                internalType(writer, typeArgument, Mode.SIGNATURE);
+                internalType(writer, typeArgument, Mode.SIGNATURE, signatureContext);
             }
         }
         writer.visitEnd();
