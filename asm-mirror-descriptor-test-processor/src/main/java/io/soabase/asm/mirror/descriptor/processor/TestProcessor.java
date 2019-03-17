@@ -38,26 +38,26 @@ import java.util.Set;
 public class TestProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment environment) {
-        StringBuilder output = new StringBuilder();
         annotations.forEach(annotation -> {
             Set<? extends Element> elementsAnnotatedWith = environment.getElementsAnnotatedWith(annotation);
             elementsAnnotatedWith.forEach(element -> {
                 if (element.getKind() == ElementKind.CLASS) {
+                    StringBuilder output = new StringBuilder();
                     TypeElement typeElement = (TypeElement) element;
                     ClassMirrorReader reader = new ClassMirrorReader(processingEnv, typeElement);
                     StringWriter stringWriter = new StringWriter();
                     TraceClassVisitor traceClassVisitor = new TraceClassVisitor(new PrintWriter(stringWriter));
                     reader.accept(traceClassVisitor);
                     output.append(stringWriter.toString());
+
+                    try (Writer out = processingEnv.getFiler().createResource(StandardLocation.SOURCE_OUTPUT, "test", typeElement.getSimpleName().toString() + ".txt").openWriter()) {
+                        out.write(output.toString());
+                    } catch (IOException e) {
+                        // TODO
+                    }
                 }
             });
         });
-
-        try (Writer out = processingEnv.getFiler().createResource(StandardLocation.SOURCE_OUTPUT, "test", "asm-output.txt").openWriter()) {
-            out.write(output.toString());
-        } catch (IOException e) {
-            // TODO
-        }
         return true;
     }
 }

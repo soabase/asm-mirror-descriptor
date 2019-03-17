@@ -17,13 +17,16 @@ package io.soabase.asm.mirror.descriptor;
 
 import org.objectweb.asm.Opcodes;
 
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 public class Util {
     private static final Map<Modifier, Integer> modifierFlags;
@@ -71,8 +74,16 @@ public class Util {
         return fqn.replace('.', '/');
     }
 
-    public static Optional<Character> toBaseType(TypeKind kind) {
-        return Optional.ofNullable(baseTypes.get(kind));
+    public static Character toBaseType(TypeKind kind) {
+        return baseTypes.get(kind);
+    }
+
+    public static boolean isObject(ProcessingEnvironment processingEnv, TypeMirror type) {
+        return (type.getKind() == TypeKind.DECLARED) && isObject(processingEnv, ((DeclaredType) type).asElement());
+    }
+
+    public static boolean isObject(ProcessingEnvironment processingEnv, Element element) {
+        return processingEnv.getElementUtils().getTypeElement("java.lang.Object").equals(element);
     }
 
     private Util() {

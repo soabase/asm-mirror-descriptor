@@ -1,6 +1,7 @@
 package io.soabase.asm.mirror.descriptor.test;
 
 import io.soabase.asm.mirror.descriptor.Util;
+import io.soabase.asm.mirror.descriptor.test.classes.SimpleGeneric;
 import io.soabase.asm.mirror.descriptor.test.classes.SimplePojo;
 import org.junit.Test;
 import org.objectweb.asm.ClassReader;
@@ -17,6 +18,11 @@ public class TestOutput {
     @Test
     public void testSimplePojo() {
         String asmGenerated = getAsmGenerated(SimplePojo.class);
+    }
+
+    @Test
+    public void testSimpleGeneric() {
+        String asmGenerated = getAsmGenerated(SimpleGeneric.class);
     }
 
     private String getAsmGenerated(Class clazz) {

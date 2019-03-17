@@ -27,6 +27,9 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 
+import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.DESCRIPTOR;
+import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.SIGNATURE;
+
 public class ClassMirrorReader {
     private final ProcessingEnvironment processingEnv;
     private final TypeElement type;
@@ -47,7 +50,7 @@ public class ClassMirrorReader {
         String thisClass = Util.toSlash(type.getQualifiedName().toString());
         String superClass = getSuperClass();
         String[] interfaces = getInterfaces();
-        String signature = null;    // TODO
+        String signature = signatureReader.classSignature(type.asType());
         classVisitor.visit(0, accessFlags, thisClass, signature, superClass, interfaces);
 
         type.getEnclosedElements().forEach(enclosed -> {
@@ -74,8 +77,8 @@ public class ClassMirrorReader {
         TypeMirror[] parameters = method.getParameters().stream()
                 .map(VariableElement::asType)
                 .toArray(TypeMirror[]::new);
-        String descriptor = signatureReader.methodType(parameters, method.getReturnType(), MirrorSignatureReader.Mode.DESCRIPTOR);
-        String signature = null;    // TODO
+        String descriptor = signatureReader.methodType(parameters, method.getReturnType(), DESCRIPTOR);
+        String signature = signatureReader.methodType(parameters, method.getReturnType(), SIGNATURE);
         String[] exceptions = null;  // TODO
         MethodVisitor methodVisitor = classVisitor.visitMethod(accessFlags, methodName, descriptor, signature, exceptions);
     }
@@ -83,8 +86,8 @@ public class ClassMirrorReader {
     private void readField(ClassVisitor classVisitor, VariableElement field) {
         int accessFlags = Util.modifiersToAccessFlags(field.getModifiers());
         String name = field.getSimpleName().toString();
-        String descriptor = signatureReader.type(field.asType(), MirrorSignatureReader.Mode.DESCRIPTOR);
-        String signature = null;    // TODO
+        String descriptor = signatureReader.type(field.asType(), DESCRIPTOR);
+        String signature = signatureReader.type(field.asType(), SIGNATURE);
         Object constantValue = field.getConstantValue();
         FieldVisitor fieldVisitor = classVisitor.visitField(accessFlags, name, descriptor, signature, constantValue);
     }
@@ -100,7 +103,7 @@ public class ClassMirrorReader {
 
     private String getSuperClass() {
         Element element = ((DeclaredType) type.getSuperclass()).asElement();
-        if (element.equals(processingEnv.getElementUtils().getTypeElement("java.lang.Object"))) {
+        if (Util.isObject(processingEnv, element)) {
             return null;
         }
         return Util.toSlash(((TypeElement) element).getQualifiedName().toString());
