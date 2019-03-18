@@ -66,11 +66,7 @@ public class TestClassVisitor extends ClassVisitor {
 
     @Override
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-        classDetails = new VisitDetails(name, asAccess(access), signature, superName, Arrays.toString(interfaces));
-    }
-
-    private String asAccess(int access) {
-        return "access:" + access;
+        classDetails = new VisitDetails(asName(name), asAccess(access), asSignature(signature), asSuper(superName), asInterfaces(interfaces));
     }
 
     @Override
@@ -114,19 +110,51 @@ public class TestClassVisitor extends ClassVisitor {
 
     @Override
     public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
-        fieldDetails.add(new VisitDetails(name, asAccess(access), descriptor, signature, String.valueOf(value)));
+        fieldDetails.add(new VisitDetails(asName(name), asAccess(access), asDescriptor(descriptor), asSignature(signature), asConstant(value)));
         return null;    // TODO
     }
 
     @Override
     public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
         if ((access & (Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)) == 0) {
-            methodDetails.add(new VisitDetails(name, asAccess(access), descriptor, signature, Arrays.toString(exceptions)));
+            methodDetails.add(new VisitDetails(asName(name), asAccess(access), asDescriptor(descriptor), asSignature(signature), asExceptions(exceptions)));
         }
         return null;
     }
 
     @Override
     public void visitEnd() {
+    }
+
+    private String asAccess(int access) {
+        return "access:      " + access;
+    }
+
+    private String asConstant(Object constant) {
+        return "const:       " + constant;
+    }
+
+    private String asName(String name) {
+        return "name:        " + name;
+    }
+
+    private String asDescriptor(String descriptor) {
+        return "description: " + descriptor;
+    }
+
+    private String asSignature(String signature) {
+        return "signature:   " + signature;
+    }
+
+    private String asExceptions(String[] exceptions) {
+        return "exceptions:  " + Arrays.toString(exceptions);
+    }
+
+    private String asInterfaces(String[] interfaces) {
+        return "interfaces:  " + Arrays.toString(interfaces);
+    }
+
+    private String asSuper(String name) {
+        return "super:       " + name;
     }
 }
