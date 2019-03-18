@@ -1,12 +1,12 @@
 /**
  * Copyright 2019 Jordan Zimmerman
- * <p>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,9 +27,11 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
-import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.*;
+import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.DESCRIPTOR;
+import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.SIGNATURE;
 
 public class ClassMirrorReader {
     private final ProcessingEnvironment processingEnv;
@@ -96,8 +98,11 @@ public class ClassMirrorReader {
     }
 
     private String[] readExceptions(ExecutableElement method) {
+        if (method.getThrownTypes().isEmpty()) {
+            return null;
+        }
         return method.getThrownTypes().stream()
-                .map(exceptionType -> signatureReader.type(exceptionType, DESCRIPTOR_UNTERMINATED))
+                .map(signatureReader::exception)
                 .toArray(String[]::new);
     }
 
@@ -121,9 +126,6 @@ public class ClassMirrorReader {
 
     private String getSuperClass() {
         Element element = ((DeclaredType) mainElement.getSuperclass()).asElement();
-        if (Util.isObject(processingEnv, element)) {
-            return null;
-        }
         return Util.toSlash(((TypeElement) element).getQualifiedName().toString());
     }
 }

@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.soabase.asm.mirror.descriptor.processor;
+package io.soabase.asm.mirror.descriptor.test.processor;
 
 import io.soabase.asm.mirror.descriptor.ClassMirrorReader;
-import org.objectweb.asm.util.TraceClassVisitor;
+import io.soabase.asm.mirror.descriptor.test.processor.visitor.TestClassVisitor;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -28,12 +28,10 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.tools.StandardLocation;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Set;
 
-@SupportedAnnotationTypes("io.soabase.asm.mirror.descriptor.processor.DescriptorTest")
+@SupportedAnnotationTypes("io.soabase.asm.mirror.descriptor.test.processor.DescriptorTest")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class TestProcessor extends AbstractProcessor {
     @Override
@@ -42,16 +40,13 @@ public class TestProcessor extends AbstractProcessor {
             Set<? extends Element> elementsAnnotatedWith = environment.getElementsAnnotatedWith(annotation);
             elementsAnnotatedWith.forEach(element -> {
                 if (element.getKind() == ElementKind.CLASS) {
-                    StringBuilder output = new StringBuilder();
                     TypeElement typeElement = (TypeElement) element;
                     ClassMirrorReader reader = new ClassMirrorReader(processingEnv, typeElement);
-                    StringWriter stringWriter = new StringWriter();
-                    TraceClassVisitor traceClassVisitor = new TraceClassVisitor(new PrintWriter(stringWriter));
-                    reader.accept(traceClassVisitor);
-                    output.append(stringWriter.toString());
+                    TestClassVisitor testClassVisitor = new TestClassVisitor();
+                    reader.accept(testClassVisitor);
 
                     try (Writer out = processingEnv.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "test", typeElement.getSimpleName().toString() + ".txt").openWriter()) {
-                        out.write(output.toString());
+                        out.write(testClassVisitor.toString());
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }

@@ -28,7 +28,9 @@ import javax.lang.model.type.TypeMirror;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Util {
     private static final Map<Modifier, Integer> modifierFlags;
@@ -74,6 +76,18 @@ public class Util {
 
     public static String toSlash(String fqn) {
         return fqn.replace('.', '/');
+    }
+
+    public static String toSlash(List<String> portions) {
+        return portions.stream()
+                .map(Util::toSlash)
+                .collect(Collectors.joining("$"));
+    }
+
+    public static String toDot(List<String> portions) {
+        return portions.stream()
+                .map(s -> s.substring(1, s.length() - 1))
+                .collect(Collectors.joining("."));
     }
 
     public static Character toBaseType(TypeKind kind) {

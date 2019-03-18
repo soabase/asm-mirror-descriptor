@@ -1,3 +1,18 @@
+/**
+ * Copyright 2019 Jordan Zimmerman
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.soabase.asm.mirror.descriptor;
 
 import org.objectweb.asm.signature.SignatureWriter;
@@ -11,18 +26,20 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
+import java.util.ArrayList;
+import java.util.List;
 
-import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.SIGNATURE;
-import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.SIGNATURE_WITH_TYPE_BOUNDS;
+import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.*;
 
 public class MirrorSignatureReader {
     private final ProcessingEnvironment processingEnv;
 
     public enum Mode {
-        DESCRIPTOR_UNTERMINATED,
+        DESCRIPTOR_EXCEPTION,
         DESCRIPTOR,
         SIGNATURE_WITH_TYPE_BOUNDS,
-        SIGNATURE
+        SIGNATURE,
+        SIGNATURE_SIMPLE
     }
 
     public MirrorSignatureReader(ProcessingEnvironment processingEnv) {
@@ -48,7 +65,6 @@ public class MirrorSignatureReader {
     public String methodType(TypeMirror[] typeParameters, TypeMirror[] parameters, TypeMirror returnType, Mode mode) {
         SignatureWriter writer = new SignatureWriter();
         switch (mode) {
-            case DESCRIPTOR_UNTERMINATED:
             case DESCRIPTOR: {
                 internalParametersType(writer, parameters, mode);
                 internalReturnType(writer, returnType, mode);
@@ -56,8 +72,9 @@ public class MirrorSignatureReader {
             }
 
             case SIGNATURE_WITH_TYPE_BOUNDS:
+            case SIGNATURE_SIMPLE:
             case SIGNATURE: {
-                internalTypeParametersType(writer, typeParameters, (mode == SIGNATURE) ? SIGNATURE_WITH_TYPE_BOUNDS : mode);
+                internalTypeParametersType(writer, typeParameters, SIGNATURE_WITH_TYPE_BOUNDS);
                 internalParametersType(writer, parameters, mode);
                 internalReturnType(writer, returnType, mode);
                 break;
@@ -82,6 +99,12 @@ public class MirrorSignatureReader {
         SignatureWriter writer = new SignatureWriter();
         internalType(writer, type, mode);
         return writer.toString();
+    }
+
+    public String exception(TypeMirror type) {
+        SignatureWriter writer = new SignatureWriter();
+        buildType(writer, type, DESCRIPTOR_EXCEPTION);
+        return writer.toString().substring(1);  // work around bug where the exception has the "L" prefix
     }
 
     private void internalTypeParametersType(SignatureWriter writer, TypeMirror[] parameters, Mode mode) {
@@ -122,8 +145,7 @@ public class MirrorSignatureReader {
 
             case DECLARED: {
                 switch (mode) {
-                    case DESCRIPTOR_UNTERMINATED: {
-                        type = processingEnv.getTypeUtils().erasure(type);
+                    case DESCRIPTOR_EXCEPTION: {
                         writer.visitClassType(Util.toSlash(type.toString()));
                         break;
                     }
@@ -135,6 +157,7 @@ public class MirrorSignatureReader {
                     }
 
                     case SIGNATURE:
+                    case SIGNATURE_SIMPLE:
                     case SIGNATURE_WITH_TYPE_BOUNDS: {
                         buildDeclaredTypeSignature(writer, type, mode);
                         break;
@@ -159,16 +182,11 @@ public class MirrorSignatureReader {
                         break;
                     }
 
+                    case SIGNATURE_SIMPLE:
                     case SIGNATURE: {
                         TypeVariable typeVariable = (TypeVariable) type;
                         TypeParameterElement typeParameterElement = (TypeParameterElement) typeVariable.asElement();
                         writer.visitTypeVariable(typeParameterElement.getSimpleName().toString());
-                        break;
-                    }
-
-                    case DESCRIPTOR_UNTERMINATED: {
-                        type = processingEnv.getTypeUtils().erasure(type);
-                        writer.visitClassType(Util.toSlash(type.toString()));
                         break;
                     }
 
@@ -183,6 +201,7 @@ public class MirrorSignatureReader {
 
             case WILDCARD: {
                 switch (mode) {
+                    case SIGNATURE_SIMPLE:
                     case SIGNATURE:
                     case SIGNATURE_WITH_TYPE_BOUNDS: {
                         WildcardType wildcardType = (WildcardType) type;
@@ -205,8 +224,27 @@ public class MirrorSignatureReader {
 
     private void buildDeclaredTypeSignature(SignatureWriter writer, TypeMirror type, Mode mode) {
         DeclaredType declaredType = (DeclaredType) type;
-        TypeMirror erasedType = processingEnv.getTypeUtils().erasure(type);
-        writer.visitClassType(Util.toSlash(erasedType.toString()));
+        if (declaredType.getEnclosingType().getKind() != TypeKind.NONE) {
+            buildDeclaredTypeSignaturePortions(writer, declaredType, mode);
+        } else {
+            buildDeclaredTypeSignatureStandard(writer, declaredType, mode);
+        }
+    }
+
+    private void buildDeclaredTypeSignaturePortions(SignatureWriter writer, DeclaredType declaredType, Mode mode) {
+        List<String> portions = new ArrayList<>();
+        buildPortionsSignature(declaredType, portions);
+        writer.visitClassType(Util.toDot(portions));
+        writer.visitEnd();
+    }
+
+    private void buildDeclaredTypeSignatureStandard(SignatureWriter writer, DeclaredType declaredType, Mode mode) {
+        if (mode == SIGNATURE_SIMPLE) {
+            writer.visitInnerClassType(declaredType.asElement().getSimpleName().toString());
+        } else {
+            TypeMirror erasedType = processingEnv.getTypeUtils().erasure(declaredType);
+            writer.visitClassType(Util.toSlash(erasedType.toString()));
+        }
         if (Util.hasTypeArguments(declaredType)) {
             writer.visitTypeArgument('=');
             for (TypeMirror typeArgument : declaredType.getTypeArguments()) {
@@ -217,7 +255,31 @@ public class MirrorSignatureReader {
     }
 
     private void buildDeclaredTypeDescriptor(SignatureWriter writer, TypeMirror type) {
-        writer.visitClassType(Util.toSlash(type.toString()));
+        List<String> portions = new ArrayList<>();
+        buildPortionsDescriptor((DeclaredType) type, portions);
+        writer.visitClassType(Util.toSlash(portions));
         writer.visitEnd();
+    }
+
+    private void buildPortionsDescriptor(DeclaredType type, List<String> portions) {
+        TypeMirror enclosingType = type.getEnclosingType();
+        if (enclosingType.getKind() != TypeKind.NONE) {
+            buildPortionsDescriptor((DeclaredType) enclosingType, portions);
+            portions.add(type.asElement().getSimpleName().toString());
+        } else {
+            portions.add(Util.toSlash(type.toString()));
+        }
+    }
+
+    private void buildPortionsSignature(DeclaredType type, List<String> portions) {
+        SignatureWriter tempWriter = new SignatureWriter();
+        TypeMirror enclosingType = type.getEnclosingType();
+        if (enclosingType.getKind() != TypeKind.NONE) {
+            buildPortionsSignature((DeclaredType) enclosingType, portions);
+            buildDeclaredTypeSignatureStandard(tempWriter, type, SIGNATURE_SIMPLE);
+        } else {
+            buildDeclaredTypeSignatureStandard(tempWriter, type, SIGNATURE);
+        }
+        portions.add(tempWriter.toString());
     }
 }
