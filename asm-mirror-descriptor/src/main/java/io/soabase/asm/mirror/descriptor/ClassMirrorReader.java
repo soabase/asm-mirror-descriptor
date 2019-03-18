@@ -27,7 +27,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
 import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.DESCRIPTOR;
@@ -82,7 +81,7 @@ public class ClassMirrorReader {
         classVisitor.visitEnd();    // TODO
     }
 
-    private void readMethod(ClassVisitor classVisitor, ExecutableElement method) {
+    public void readMethod(ClassVisitor classVisitor, ExecutableElement method) {
         int accessFlags = Util.modifiersToAccessFlags(method.getModifiers());
         String methodName = method.getSimpleName().toString();
         TypeMirror[] parameters = method.getParameters().stream()
@@ -97,6 +96,15 @@ public class ClassMirrorReader {
         MethodVisitor methodVisitor = classVisitor.visitMethod(accessFlags, methodName, descriptor, signature, exceptions);
     }
 
+    public void readField(ClassVisitor classVisitor, VariableElement field) {
+        int accessFlags = Util.modifiersToAccessFlags(field.getModifiers());
+        String name = field.getSimpleName().toString();
+        String descriptor = signatureReader.type(field.asType(), DESCRIPTOR);
+        String signature = Util.hasTypeArguments(field) ? signatureReader.type(field.asType(), SIGNATURE) : null;
+        Object constantValue = field.getConstantValue();
+        FieldVisitor fieldVisitor = classVisitor.visitField(accessFlags, name, descriptor, signature, constantValue);
+    }
+
     private String[] readExceptions(ExecutableElement method) {
         if (method.getThrownTypes().isEmpty()) {
             return null;
@@ -104,15 +112,6 @@ public class ClassMirrorReader {
         return method.getThrownTypes().stream()
                 .map(signatureReader::exception)
                 .toArray(String[]::new);
-    }
-
-    private void readField(ClassVisitor classVisitor, VariableElement field) {
-        int accessFlags = Util.modifiersToAccessFlags(field.getModifiers());
-        String name = field.getSimpleName().toString();
-        String descriptor = signatureReader.type(field.asType(), DESCRIPTOR);
-        String signature = Util.hasTypeArguments(field) ? signatureReader.type(field.asType(), SIGNATURE) : null;
-        Object constantValue = field.getConstantValue();
-        FieldVisitor fieldVisitor = classVisitor.visitField(accessFlags, name, descriptor, signature, constantValue);
     }
 
     private String[] getInterfaces() {

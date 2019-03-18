@@ -49,15 +49,17 @@ public class MirrorSignatureReader {
     public String classSignature(TypeMirror type) {
         if (type.getKind() == TypeKind.DECLARED) {
             DeclaredType declaredType = (DeclaredType) type;
-            if (Util.hasTypeArguments(declaredType)) {
-                SignatureWriter writer = new SignatureWriter();
-                for (TypeMirror typeArgument : declaredType.getTypeArguments()) {
-                    internalType(writer, typeArgument, SIGNATURE_WITH_TYPE_BOUNDS);
-                }
-                writer.visitSuperclass();
-                internalType(writer, ((TypeElement) declaredType.asElement()).getSuperclass(), SIGNATURE_WITH_TYPE_BOUNDS);
-                return writer.toString();
+            TypeElement typeElement = (TypeElement) declaredType.asElement();
+            SignatureWriter writer = new SignatureWriter();
+            for (TypeMirror typeArgument : declaredType.getTypeArguments()) {
+                internalType(writer, typeArgument, SIGNATURE_WITH_TYPE_BOUNDS);
             }
+            writer.visitSuperclass();
+            internalType(writer, typeElement.getSuperclass(), SIGNATURE);
+            for (TypeMirror interfaceType : typeElement.getInterfaces()) {
+                internalType(writer, interfaceType, SIGNATURE);
+            }
+            return writer.toString();
         }
         return null;
     }

@@ -120,7 +120,9 @@ public class TestClassVisitor extends ClassVisitor {
 
     @Override
     public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-        methodDetails.add(new VisitDetails(name, asAccess(access), descriptor, signature, Arrays.toString(exceptions)));
+        if ((access & (Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)) == 0) {
+            methodDetails.add(new VisitDetails(name, asAccess(access), descriptor, signature, Arrays.toString(exceptions)));
+        }
         return null;
     }
 
