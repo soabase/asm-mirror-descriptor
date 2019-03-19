@@ -25,6 +25,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.TypePath;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -53,17 +54,10 @@ public class TestClassVisitor extends ClassVisitor {
 
     @Override
     public String toString() {
-        //noinspection StringBufferReplaceableByString
-        StringBuilder str = new StringBuilder();
-        str.append("CLASS\n=====\n").append(classDetails);
-
-        str.append("FIELDS\n======\n");
-        str.append(fieldDetails.stream().map(VisitDetails::toString).collect(Collectors.joining("\n", "", "\n")));
-
-        str.append("METHODS\n=======\n");
-        str.append(methodDetails.stream().map(VisitDetails::toString).collect(Collectors.joining("\n")));
-
-        return str.toString().trim();
+        String base = VisitDetails.toString("== CLASS ==", Collections.singletonList(classDetails))
+                + VisitDetails.toString("== FIELDS ==", fieldDetails)
+                + VisitDetails.toString("== METHODS ==", methodDetails);
+        return base.trim();
     }
 
     @Override

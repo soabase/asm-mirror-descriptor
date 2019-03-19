@@ -16,15 +16,23 @@
 package io.soabase.asm.mirror.descriptor.test.processor.visitor;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class VisitDetails {
+public class VisitDetails implements Comparable<VisitDetails> {
     private final String[] values;
     private final List<AnnotationDetails> annotations = new ArrayList<>();
 
     public VisitDetails(String... values) {
         this.values = values;
+    }
+
+    public static String toString(String heading, List<VisitDetails> details) {
+        List<VisitDetails> copy = new ArrayList<>(details);
+        Collections.sort(copy);
+        String base = (heading + copy.stream().map(VisitDetails::toString).collect(Collectors.joining("\n", "\n", ""))).trim();
+        return base + "\n\n";
     }
 
     @Override
@@ -35,13 +43,24 @@ public class VisitDetails {
             str.append("\n");
         }
         if (!annotations.isEmpty()) {
+            List<AnnotationDetails> copy = new ArrayList<>(annotations);
+            Collections.sort(copy);
             str.append("annotations:\n");
-            str.append(annotations.stream().map(AnnotationDetails::toString).collect(Collectors.joining("\n", "", "\n")));
+            str.append(copy.stream().map(AnnotationDetails::toString).collect(Collectors.joining("\n", "", "")));
         }
         return str.toString();
     }
 
     public void addAnnotation(AnnotationDetails annotation) {
         annotations.add(annotation);
+    }
+
+    public String firstValue() {
+        return (values.length > 0) ? values[0] : "";
+    }
+
+    @Override
+    public int compareTo(VisitDetails o) {
+        return firstValue().compareTo(o.firstValue());
     }
 }

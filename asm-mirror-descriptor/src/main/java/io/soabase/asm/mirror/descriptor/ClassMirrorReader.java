@@ -132,14 +132,11 @@ public class ClassMirrorReader {
                 }
             });
             method.getReturnType().getAnnotationMirrors().forEach(annotation -> readAnnotationTypeValue(annotation, TypeReference.METHOD_RETURN, methodVisitor::visitTypeAnnotation));
+            readTypeAnnotations(method.getTypeParameters(), TypeReference.METHOD_TYPE_PARAMETER, methodVisitor::visitTypeAnnotation);
 
-            // do METHOD_FORMAL_PARAMETER first as this appears to be what javac does
             IntStream.range(0, method.getParameters().size()).forEach(parameter -> {
                 VariableElement parameterElement = method.getParameters().get(parameter);
                 parameterElement.asType().getAnnotationMirrors().forEach(annotation -> readParameterAnnotationTypeValue(annotation, parameter, TypeReference.METHOD_FORMAL_PARAMETER, methodVisitor::visitTypeAnnotation));
-            });
-            IntStream.range(0, method.getParameters().size()).forEach(parameter -> {
-                VariableElement parameterElement = method.getParameters().get(parameter);
                 parameterElement.getAnnotationMirrors().forEach(annotation -> readParameterAnnotationValue(annotation, parameter, methodVisitor::visitParameterAnnotation));
             });
         }

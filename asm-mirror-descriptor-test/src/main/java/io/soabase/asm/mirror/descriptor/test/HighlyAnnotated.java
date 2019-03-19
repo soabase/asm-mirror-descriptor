@@ -35,9 +35,9 @@ public class HighlyAnnotated<
     }
 
     @TestAnnotation(value = "methodOne")
-    public String methodOne(
+    public <@TestAnnotation(value = "methodOne-T") X> String methodOne(
             @TestAnnotation(value = "methodOne-param1")
-            String param1,
+            int param1,
 
             @TestAnnotation(value = "methodOne-param2")
             String param2

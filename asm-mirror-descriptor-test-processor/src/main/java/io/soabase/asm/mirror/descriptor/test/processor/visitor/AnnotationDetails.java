@@ -17,15 +17,26 @@ package io.soabase.asm.mirror.descriptor.test.processor.visitor;
 
 import org.objectweb.asm.TypePath;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
-public class AnnotationDetails {
+public class AnnotationDetails implements Comparable<AnnotationDetails> {
     private final String descriptor;
     private final int typeRef;
     private final TypePath typePath;
     private final int parameter;
-    private final Map<String, String> values = new HashMap<>();
+    private final List<NameValue> values = new ArrayList<>();
+
+    private static class NameValue {
+        final String name;
+        final String value;
+
+        NameValue(String name, String value) {
+            this.name = name;
+            this.value = value;
+        }
+    }
 
     public AnnotationDetails(String descriptor, int typeRef, TypePath typePath, int parameter) {
         this.descriptor = descriptor;
@@ -35,7 +46,7 @@ public class AnnotationDetails {
     }
 
     public void add(String name, String value) {
-        values.put(name, value);
+        values.add(new NameValue(name, value));
     }
 
     @Override
@@ -45,8 +56,13 @@ public class AnnotationDetails {
         str.append("    typeref:    ").append(typeRef).append('\n');
         str.append("    typepath:   ").append(typePath).append('\n');
         str.append("    parameter:  ").append(parameter).append('\n');
-        values.forEach((name, value) -> str.append("    ").append(name).append(":").append(space(name.length() + 1, 12)).append(value).append('\n'));
+        values.forEach(nameValue -> str.append("    ").append(nameValue.name).append(":").append(space(nameValue.name.length() + 1, 12)).append(nameValue.value).append('\n'));
         return str.toString();
+    }
+
+    @Override
+    public int compareTo(AnnotationDetails o) {
+        return toString().compareTo(o.toString());
     }
 
     private static String space(int length, int max) {
