@@ -36,7 +36,7 @@ import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.*;
 public class MirrorSignatureReader {
     private final ProcessingEnvironment processingEnv;
 
-    public enum Mode {
+    protected enum Mode {
         DESCRIPTOR_EXCEPTION,
         DESCRIPTOR,
         SIGNATURE_WITH_TYPE_BOUNDS,
@@ -68,7 +68,71 @@ public class MirrorSignatureReader {
         return null;
     }
 
-    public String methodType(TypeMirror[] typeParameters, TypeMirror[] parameters, TypeMirror returnType, Mode mode) {
+    public String methodTypeDescriptor(TypeMirror[] typeParameters, TypeMirror[] parameters, TypeMirror returnType) {
+        return methodType(typeParameters, parameters, returnType, DESCRIPTOR);
+    }
+
+    public String methodTypeSignature(TypeMirror[] typeParameters, TypeMirror[] parameters, TypeMirror returnType) {
+        return methodType(typeParameters, parameters, returnType, SIGNATURE);
+    }
+
+    public String parametersTypeDescriptor(TypeMirror[] parameters) {
+        return parametersType(parameters, DESCRIPTOR);
+    }
+
+    public String parametersTypeSignature(TypeMirror[] parameters) {
+        return parametersType(parameters, SIGNATURE);
+    }
+
+    public String returnTypeDescriptor(TypeMirror type) {
+        return returnType(type, DESCRIPTOR);
+    }
+
+    public String returnTypeSignature(TypeMirror type) {
+        return returnType(type, SIGNATURE);
+    }
+
+    public String typeDescriptor(TypeMirror type) {
+        return type(type, DESCRIPTOR);
+    }
+
+    public String typeSignature(TypeMirror type) {
+        return type(type, SIGNATURE);
+    }
+
+    public String exception(TypeMirror type) {
+        type = unwrapType(type);
+
+        SignatureWriter writer = new SignatureWriter();
+        buildType(writer, type, DESCRIPTOR_EXCEPTION);
+        return writer.toString().substring(1);  // work around bug where the exception has the "L" prefix
+    }
+
+    private String type(TypeMirror type, Mode mode) {
+        type = unwrapType(type);
+
+        SignatureWriter writer = new SignatureWriter();
+        internalType(writer, type, mode);
+        return writer.toString();
+    }
+
+    private String returnType(TypeMirror type, Mode mode) {
+        type = unwrapType(type);
+
+        SignatureWriter writer = new SignatureWriter();
+        internalReturnType(writer, type, mode);
+        return writer.toString();
+    }
+
+    private String parametersType(TypeMirror[] parameters, Mode mode) {
+        parameters = unwrapType(parameters);
+
+        SignatureWriter writer = new SignatureWriter();
+        internalParametersType(writer, parameters, mode);
+        return writer.toString();
+    }
+
+    private String methodType(TypeMirror[] typeParameters, TypeMirror[] parameters, TypeMirror returnType, Mode mode) {
         typeParameters = unwrapType(typeParameters);
         parameters = unwrapType(parameters);
         returnType = unwrapType(returnType);
@@ -91,38 +155,6 @@ public class MirrorSignatureReader {
             }
         }
         return writer.toString();
-    }
-
-    public String parametersType(TypeMirror[] parameters, Mode mode) {
-        parameters = unwrapType(parameters);
-
-        SignatureWriter writer = new SignatureWriter();
-        internalParametersType(writer, parameters, mode);
-        return writer.toString();
-    }
-
-    public String returnType(TypeMirror type, Mode mode) {
-        type = unwrapType(type);
-
-        SignatureWriter writer = new SignatureWriter();
-        internalReturnType(writer, type, mode);
-        return writer.toString();
-    }
-
-    public String type(TypeMirror type, Mode mode) {
-        type = unwrapType(type);
-
-        SignatureWriter writer = new SignatureWriter();
-        internalType(writer, type, mode);
-        return writer.toString();
-    }
-
-    public String exception(TypeMirror type) {
-        type = unwrapType(type);
-
-        SignatureWriter writer = new SignatureWriter();
-        buildType(writer, type, DESCRIPTOR_EXCEPTION);
-        return writer.toString().substring(1);  // work around bug where the exception has the "L" prefix
     }
 
     private void internalTypeParametersType(SignatureWriter writer, TypeMirror[] parameters, Mode mode) {

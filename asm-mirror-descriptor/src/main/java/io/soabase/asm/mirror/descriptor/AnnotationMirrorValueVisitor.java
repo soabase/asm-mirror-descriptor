@@ -106,14 +106,14 @@ public class AnnotationMirrorValueVisitor implements AnnotationValueVisitor<Void
 
     @Override
     public Void visitEnumConstant(VariableElement c, AnnotationVisitor visitor) {
-        String descriptor = signatureReader.type(c.asType(), DESCRIPTOR);
+        String descriptor = signatureReader.typeDescriptor(c.asType());
         visitor.visitEnum(name, descriptor, c.getSimpleName().toString());
         return null;
     }
 
     @Override
     public Void visitAnnotation(AnnotationMirror a, AnnotationVisitor visitor) {
-        String descriptor = signatureReader.type(a.getAnnotationType(), DESCRIPTOR);
+        String descriptor = signatureReader.typeDescriptor(a.getAnnotationType());
         AnnotationVisitor visitAnnotation = visitor.visitAnnotation(name, descriptor);
         if (visitAnnotation != null) {
             a.getElementValues().forEach((element, value) -> {

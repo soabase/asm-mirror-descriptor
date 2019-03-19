@@ -117,8 +117,8 @@ public class ClassMirrorReader {
         TypeMirror[] typeParameters = method.getTypeParameters().stream()
                 .map(Element::asType)
                 .toArray(TypeMirror[]::new);
-        String descriptor = signatureReader.methodType(typeParameters, parameters, method.getReturnType(), DESCRIPTOR);
-        String signature = Util.hasTypeArguments(method) ? signatureReader.methodType(typeParameters, parameters, method.getReturnType(), SIGNATURE) : null;
+        String descriptor = signatureReader.methodTypeDescriptor(typeParameters, parameters, method.getReturnType());
+        String signature = Util.hasTypeArguments(method) ? signatureReader.methodTypeSignature(typeParameters, parameters, method.getReturnType()) : null;
         String[] exceptions = readExceptions(method);
         MethodVisitor methodVisitor = classVisitor.visitMethod(accessFlags, methodName, descriptor, signature, exceptions);
         if (methodVisitor != null) {
@@ -149,8 +149,8 @@ public class ClassMirrorReader {
         int accessFlags = Util.modifiersToAccessFlags(field.getModifiers());
         String name = field.getSimpleName().toString();
         TypeMirror type = field.asType();
-        String descriptor = signatureReader.type(type, DESCRIPTOR);
-        String signature = Util.hasTypeArguments(field) ? signatureReader.type(type, SIGNATURE) : null;
+        String descriptor = signatureReader.typeDescriptor(type);
+        String signature = Util.hasTypeArguments(field) ? signatureReader.typeSignature(type) : null;
         Object constantValue = field.getConstantValue();
         FieldVisitor fieldVisitor = classVisitor.visitField(accessFlags, name, descriptor, signature, constantValue);
         if (fieldVisitor != null) {
@@ -186,7 +186,7 @@ public class ClassMirrorReader {
     }
 
     private void readAnnotationValue(AnnotationMirror annotation, VisitAnnotationProc visitAnnotationProc) {
-        String annotationDescriptor = signatureReader.type(annotation.getAnnotationType(), DESCRIPTOR);
+        String annotationDescriptor = signatureReader.typeDescriptor(annotation.getAnnotationType());
         AnnotationVisitor annotationVisitor = visitAnnotationProc.visit(annotationDescriptor, isVisibleAnnotation(annotation));
         if (annotationVisitor != null) {
             annotation.getElementValues().forEach((element, annotationValue) -> {
