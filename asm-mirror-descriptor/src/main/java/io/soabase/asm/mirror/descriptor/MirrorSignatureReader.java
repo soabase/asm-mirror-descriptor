@@ -18,6 +18,7 @@ package io.soabase.asm.mirror.descriptor;
 import org.objectweb.asm.signature.SignatureWriter;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.ArrayType;
@@ -28,6 +29,7 @@ import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.*;
 
@@ -47,6 +49,8 @@ public class MirrorSignatureReader {
     }
 
     public String classSignature(TypeMirror type) {
+        type = unwrapType(type);
+
         if (type.getKind() == TypeKind.DECLARED) {
             DeclaredType declaredType = (DeclaredType) type;
             TypeElement typeElement = (TypeElement) declaredType.asElement();
@@ -65,6 +69,10 @@ public class MirrorSignatureReader {
     }
 
     public String methodType(TypeMirror[] typeParameters, TypeMirror[] parameters, TypeMirror returnType, Mode mode) {
+        typeParameters = unwrapType(typeParameters);
+        parameters = unwrapType(parameters);
+        returnType = unwrapType(returnType);
+
         SignatureWriter writer = new SignatureWriter();
         switch (mode) {
             case DESCRIPTOR: {
@@ -86,24 +94,32 @@ public class MirrorSignatureReader {
     }
 
     public String parametersType(TypeMirror[] parameters, Mode mode) {
+        parameters = unwrapType(parameters);
+
         SignatureWriter writer = new SignatureWriter();
         internalParametersType(writer, parameters, mode);
         return writer.toString();
     }
 
     public String returnType(TypeMirror type, Mode mode) {
+        type = unwrapType(type);
+
         SignatureWriter writer = new SignatureWriter();
         internalReturnType(writer, type, mode);
         return writer.toString();
     }
 
     public String type(TypeMirror type, Mode mode) {
+        type = unwrapType(type);
+
         SignatureWriter writer = new SignatureWriter();
         internalType(writer, type, mode);
         return writer.toString();
     }
 
     public String exception(TypeMirror type) {
+        type = unwrapType(type);
+
         SignatureWriter writer = new SignatureWriter();
         buildType(writer, type, DESCRIPTOR_EXCEPTION);
         return writer.toString().substring(1);  // work around bug where the exception has the "L" prefix
@@ -283,5 +299,25 @@ public class MirrorSignatureReader {
             buildDeclaredTypeSignatureStandard(tempWriter, type, SIGNATURE);
         }
         portions.add(tempWriter.toString());
+    }
+
+    private TypeMirror[] unwrapType(TypeMirror[] types) {
+        return Stream.of(types)
+                .map(this::unwrapType)
+                .toArray(TypeMirror[]::new);
+    }
+
+    private TypeMirror unwrapType(TypeMirror type) {
+        if (type.getKind() == TypeKind.DECLARED) {
+            if (!type.getAnnotationMirrors().isEmpty()) {
+                // for some reason, annotated types are an internal compound "annotation type" - this normalizes that
+                Element element = ((DeclaredType) type).asElement();
+                Element typeElement = processingEnv.getTypeUtils().asElement(element.asType());
+                if (typeElement != null) {
+                    type = typeElement.asType();
+                }
+            }
+        }
+        return type;
     }
 }

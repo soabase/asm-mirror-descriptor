@@ -30,7 +30,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -113,12 +112,12 @@ public class ClassMirrorReader {
         boolean isConstructor = Util.isConstructor(method);
         String methodName = method.getSimpleName().toString();
         TypeMirror[] parameters = method.getParameters().stream()
-                .map(this::unwrapType)
+                .map(Element::asType)
                 .toArray(TypeMirror[]::new);
         TypeMirror[] typeParameters = method.getTypeParameters().stream()
-                .map(this::unwrapType)
+                .map(Element::asType)
                 .toArray(TypeMirror[]::new);
-        String descriptor = signatureReader.methodType(typeParameters, parameters, unwrapType(method.getReturnType()), DESCRIPTOR);
+        String descriptor = signatureReader.methodType(typeParameters, parameters, method.getReturnType(), DESCRIPTOR);
         String signature = Util.hasTypeArguments(method) ? signatureReader.methodType(typeParameters, parameters, method.getReturnType(), SIGNATURE) : null;
         String[] exceptions = readExceptions(method);
         MethodVisitor methodVisitor = classVisitor.visitMethod(accessFlags, methodName, descriptor, signature, exceptions);
@@ -149,7 +148,7 @@ public class ClassMirrorReader {
     public void readField(ClassVisitor classVisitor, VariableElement field) {
         int accessFlags = Util.modifiersToAccessFlags(field.getModifiers());
         String name = field.getSimpleName().toString();
-        TypeMirror type = unwrapType(field);
+        TypeMirror type = field.asType();
         String descriptor = signatureReader.type(type, DESCRIPTOR);
         String signature = Util.hasTypeArguments(field) ? signatureReader.type(type, SIGNATURE) : null;
         Object constantValue = field.getConstantValue();
@@ -158,25 +157,6 @@ public class ClassMirrorReader {
             field.getAnnotationMirrors().forEach(annotation -> readAnnotationValue(annotation, fieldVisitor::visitAnnotation));
             field.asType().getAnnotationMirrors().forEach(annotation -> readAnnotationTypeValue(annotation, TypeReference.FIELD, fieldVisitor::visitTypeAnnotation));
         }
-    }
-
-    private TypeMirror unwrapType(TypeMirror type) {
-        if (type.getKind() == TypeKind.DECLARED) {
-            return unwrapType(((DeclaredType) type).asElement());
-        }
-        return type;
-    }
-
-    private TypeMirror unwrapType(Element element) {
-        TypeMirror type;
-        if (element.getAnnotationMirrors().isEmpty()) {
-            type = element.asType();
-        } else {
-            // for some reason, field.asType() is an internal "annotation type" when the field is annotated
-            Element typeElement = processingEnv.getTypeUtils().asElement(element.asType());
-            type = (typeElement != null) ? typeElement.asType() : element.asType();
-        }
-        return type;
     }
 
     private ElementType[] getAnnotationTargets(AnnotationMirror annotation) {
