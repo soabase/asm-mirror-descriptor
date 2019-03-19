@@ -19,6 +19,7 @@ import io.soabase.asm.mirror.descriptor.Util;
 import io.soabase.asm.mirror.descriptor.test.classes.AsmGuideTypes;
 import io.soabase.asm.mirror.descriptor.test.classes.ComplexExtends;
 import io.soabase.asm.mirror.descriptor.test.classes.ComplexGeneric;
+import io.soabase.asm.mirror.descriptor.test.classes.HighlyAnnotated;
 import io.soabase.asm.mirror.descriptor.test.classes.SimpleGeneric;
 import io.soabase.asm.mirror.descriptor.test.classes.SimplePojo;
 import io.soabase.asm.mirror.descriptor.test.processor.visitor.TestClassVisitor;
@@ -44,6 +45,11 @@ public class TestOutput {
     @Test
     public void testSimpleGeneric() {
         internalTest(SimpleGeneric.class);
+    }
+
+    @Test
+    public void testHighlyAnnotated() {
+        internalTest(HighlyAnnotated.class);
     }
 
     @Test

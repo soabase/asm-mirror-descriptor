@@ -15,8 +15,12 @@
  */
 package io.soabase.asm.mirror.descriptor.test.processor.visitor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class VisitDetails {
-    public final String[] values;
+    private final String[] values;
+    private final List<AnnotationDetails> annotations = new ArrayList<>();
 
     public VisitDetails(String... values) {
         this.values = values;
@@ -24,6 +28,16 @@ public class VisitDetails {
 
     @Override
     public String toString() {
-        return String.join("\n", values);
+        StringBuilder str = new StringBuilder();
+        str.append(String.join("\n", values));
+        if (!annotations.isEmpty()) {
+            str.append("\nannotations:\n");
+            annotations.forEach(a -> str.append(a.toString()).append('\n'));
+        }
+        return str.toString();
+    }
+
+    public void addAnnotation(AnnotationDetails annotation) {
+        annotations.add(annotation);
     }
 }

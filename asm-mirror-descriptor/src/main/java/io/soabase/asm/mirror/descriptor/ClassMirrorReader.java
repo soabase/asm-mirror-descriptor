@@ -15,12 +15,14 @@
  */
 package io.soabase.asm.mirror.descriptor;
 
+import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -103,6 +105,25 @@ public class ClassMirrorReader {
         String signature = Util.hasTypeArguments(field) ? signatureReader.type(field.asType(), SIGNATURE) : null;
         Object constantValue = field.getConstantValue();
         FieldVisitor fieldVisitor = classVisitor.visitField(accessFlags, name, descriptor, signature, constantValue);
+        if (fieldVisitor != null) {
+            field.getAnnotationMirrors().forEach(annotation -> {
+                String annotationDescriptor = signatureReader.type(annotation.getAnnotationType(), DESCRIPTOR);
+                AnnotationVisitor annotationVisitor = fieldVisitor.visitAnnotation(annotationDescriptor, true);
+                readAnnotationValue(annotation, annotationVisitor);
+            });
+        }
+    }
+
+    private void readAnnotationValue(AnnotationMirror annotation, AnnotationVisitor annotationVisitor) {
+        if (annotationVisitor != null) {
+            annotation.getElementValues().forEach((element, value) -> {
+                switch (element.asType().getKind()) {
+                    case ARRAY: {
+                        break;
+                    }
+                }
+            });
+        }
     }
 
     private String[] readExceptions(ExecutableElement method) {
