@@ -144,6 +144,10 @@ public class Util {
         return (type.getKind() == TypeKind.DECLARED) && (((DeclaredType) type).asElement().getKind() == ElementKind.INTERFACE);
     }
 
+    public static boolean isConstructor(ExecutableElement method) {
+        return method.getSimpleName().toString().equals("<init>");
+    }
+
     private Util() {
     }
 }
