@@ -13,11 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.soabase.asm.mirror.descriptor.test;
+package io.soabase.asm.mirror.descriptor.test.types;
 
-public class OuterClass<K, V> {
-    public class InnerClass<I> {
-        public class InnerInnerClass<L> {
-        }
-    }
+public enum TestEnum {
+    ONE, TWO, THREE
 }

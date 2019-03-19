@@ -17,6 +17,12 @@ package io.soabase.asm.mirror.descriptor.test;
 
 import io.soabase.asm.mirror.descriptor.Util;
 import io.soabase.asm.mirror.descriptor.test.processor.visitor.TestClassVisitor;
+import io.soabase.asm.mirror.descriptor.test.types.AsmGuideTypes;
+import io.soabase.asm.mirror.descriptor.test.types.ComplexExtends;
+import io.soabase.asm.mirror.descriptor.test.types.ComplexGeneric;
+import io.soabase.asm.mirror.descriptor.test.types.HighlyAnnotated;
+import io.soabase.asm.mirror.descriptor.test.types.SimpleGeneric;
+import io.soabase.asm.mirror.descriptor.test.types.SimplePojo;
 import org.junit.Assert;
 import org.junit.Test;
 import org.objectweb.asm.ClassReader;

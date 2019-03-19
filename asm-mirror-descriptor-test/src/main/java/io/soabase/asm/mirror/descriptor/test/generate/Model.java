@@ -13,8 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.soabase.asm.mirror.descriptor.test;
+package io.soabase.asm.mirror.descriptor.test.generate;
 
-public abstract class BaseClass<T> {
-    public abstract void setT(T x);
+import io.soabase.asm.mirror.descriptor.test.processor.GeneratorTest;
+
+@GeneratorTest
+public interface Model {
+    void itsMe();
+
+    void itsYou();
 }

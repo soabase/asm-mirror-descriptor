@@ -13,25 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.soabase.asm.mirror.descriptor.test;
+package io.soabase.asm.mirror.descriptor.test.types;
 
-import io.soabase.asm.mirror.descriptor.test.processor.DescriptorTest;
-
-import java.util.List;
-
-@DescriptorTest
-public class ComplexExtends<T extends List<String>> extends BaseClass<T> implements MixinA<T>, MixinB<T> {
-    @Override
-    public void setT(T x) {
-    }
-
-    @Override
-    public T getA() {
-        return null;
-    }
-
-    @Override
-    public T getB() {
-        return null;
-    }
+public abstract class BaseClass<T> {
+    public abstract void setT(T x);
 }

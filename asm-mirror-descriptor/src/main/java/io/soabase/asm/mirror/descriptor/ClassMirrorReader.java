@@ -31,6 +31,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -221,6 +222,9 @@ public class ClassMirrorReader {
     }
 
     private String getSuperClass() {
+        if (mainElement.getSuperclass().getKind() == TypeKind.NONE) {
+            return null;
+        }
         Element element = ((DeclaredType) mainElement.getSuperclass()).asElement();
         return Util.toSlash(((TypeElement) element).getQualifiedName().toString());
     }

@@ -13,18 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.soabase.asm.mirror.descriptor.test;
+package io.soabase.asm.mirror.descriptor.test.processor;
 
-import io.soabase.asm.mirror.descriptor.test.processor.DescriptorTest;
-
+import java.util.ArrayList;
 import java.util.List;
 
-@DescriptorTest
-public class AsmGuideTypes<E, K, V> {
-    public List<E> l1;
-    public List<?> l2;
-    public List<? extends Number> l3;
-    public List<? super Integer> l4;
-    public List<List<String>[]> l5;
-    public OuterClass<K, V>.InnerClass<K>.InnerInnerClass<V> o1;
+public class GeneratorBase {
+    public final List<String> values = new ArrayList<>();
+
+    public void addValue(String str) {
+        values.add(str);
+    }
+
+    @Override
+    public String toString() {
+        return values.toString();
+    }
 }

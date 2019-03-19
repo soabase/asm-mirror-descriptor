@@ -15,24 +15,18 @@
  */
 package io.soabase.asm.mirror.descriptor.test;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import io.soabase.asm.mirror.descriptor.test.generate.Model;
+import org.junit.Assert;
+import org.junit.Test;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target({
-        ElementType.TYPE,
-        ElementType.FIELD,
-        ElementType.METHOD,
-        ElementType.PARAMETER,
-        ElementType.CONSTRUCTOR,
-        ElementType.LOCAL_VARIABLE,
-        ElementType.ANNOTATION_TYPE,
-        ElementType.PACKAGE,
-        ElementType.TYPE_PARAMETER,
-        ElementType.TYPE_USE
-})
-public @interface TestNestedAnnotation {
-    TestAnnotation nested();
+import java.util.Arrays;
+
+public class TestGenerated {
+    @Test
+    public void testModelGen() throws Exception {
+        Model model = (Model) Class.forName("io.soabase.asm.mirror.descriptor.test.generate.ModelGen").getConstructor().newInstance();
+        model.itsMe();
+        model.itsYou();
+        Assert.assertEquals(model.toString(), Arrays.asList("This is itsMe", "This is itsYou").toString());
+    }
 }

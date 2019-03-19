@@ -13,12 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.soabase.asm.mirror.descriptor.test;
+package io.soabase.asm.mirror.descriptor.test.types;
 
 import io.soabase.asm.mirror.descriptor.test.processor.DescriptorTest;
 
 import java.util.List;
 
 @DescriptorTest
-public class Test<T extends @TestAnnotation List<T>> {
+public class SimpleGeneric<T> {
+    private final List<String> strings;
+
+    public SimpleGeneric(List<String> strings) {
+        this.strings = strings;
+    }
+
+    public List<String> getStrings() {
+        return strings;
+    }
 }

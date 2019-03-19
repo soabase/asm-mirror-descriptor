@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.soabase.asm.mirror.descriptor.test;
+package io.soabase.asm.mirror.descriptor.test.types;
 
 import io.soabase.asm.mirror.descriptor.test.processor.DescriptorTest;
 
