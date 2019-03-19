@@ -26,6 +26,7 @@ import org.objectweb.asm.TypePath;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static io.soabase.asm.mirror.descriptor.test.processor.visitor.Format.*;
 
@@ -52,14 +53,15 @@ public class TestClassVisitor extends ClassVisitor {
 
     @Override
     public String toString() {
+        //noinspection StringBufferReplaceableByString
         StringBuilder str = new StringBuilder();
         str.append("CLASS\n=====\n").append(classDetails);
 
         str.append("FIELDS\n======\n");
-        fieldDetails.forEach(v -> str.append(v.toString()));
+        str.append(fieldDetails.stream().map(VisitDetails::toString).collect(Collectors.joining("\n", "", "\n")));
 
         str.append("METHODS\n=======\n");
-        methodDetails.forEach(v -> str.append(v.toString()));
+        str.append(methodDetails.stream().map(VisitDetails::toString).collect(Collectors.joining("\n")));
 
         return str.toString().trim();
     }
@@ -88,12 +90,12 @@ public class TestClassVisitor extends ClassVisitor {
 
     @Override
     public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-        return new TestAnnotationVisitor(classDetails, descriptor, -1, null, -1);
+        return visible ? new TestAnnotationVisitor(classDetails, descriptor, -1, null, -1) : null;
     }
 
     @Override
     public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
-        return new TestAnnotationVisitor(classDetails, descriptor, typeRef, typePath, -1);
+        return visible ? new TestAnnotationVisitor(classDetails, descriptor, typeRef, typePath, -1) : null;
     }
 
     @Override
@@ -115,12 +117,12 @@ public class TestClassVisitor extends ClassVisitor {
         return new FieldVisitor(Opcodes.ASM7) {
             @Override
             public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-                return new TestAnnotationVisitor(details, descriptor, -1, null, -1);
+                return visible ? new TestAnnotationVisitor(details, descriptor, -1, null, -1) : null;
             }
 
             @Override
             public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
-                return new TestAnnotationVisitor(details, descriptor, typeRef, typePath, -1);
+                return visible ? new TestAnnotationVisitor(details, descriptor, typeRef, typePath, -1) : null;
             }
         };
     }
@@ -138,17 +140,17 @@ public class TestClassVisitor extends ClassVisitor {
 
                 @Override
                 public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-                    return new TestAnnotationVisitor(details, descriptor, -1, null, -1);
+                    return visible ? new TestAnnotationVisitor(details, descriptor, -1, null, -1) : null;
                 }
 
                 @Override
                 public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
-                    return new TestAnnotationVisitor(details, descriptor, typeRef, typePath, -1);
+                    return visible ? new TestAnnotationVisitor(details, descriptor, typeRef, typePath, -1) : null;
                 }
 
                 @Override
                 public AnnotationVisitor visitParameterAnnotation(int parameter, String descriptor, boolean visible) {
-                    return new TestAnnotationVisitor(details, descriptor, -1, null, parameter);
+                    return visible ? new TestAnnotationVisitor(details, descriptor, -1, null, parameter) : null;
                 }
             };
         }
