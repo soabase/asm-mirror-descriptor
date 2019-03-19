@@ -28,6 +28,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
@@ -36,10 +37,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.IntStream;
-
-import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.DESCRIPTOR;
-import static io.soabase.asm.mirror.descriptor.MirrorSignatureReader.Mode.SIGNATURE;
 
 public class ClassMirrorReader {
     private final ProcessingEnvironment processingEnv;
@@ -88,6 +87,7 @@ public class ClassMirrorReader {
         classVisitor.visit(classVersion, accessFlags, thisClass, signature, superClass, interfaces);
 
         mainElement.getAnnotationMirrors().forEach(annotation -> readAnnotationValue(annotation, classVisitor::visitAnnotation));
+        readTypeAnnotations(mainElement.getTypeParameters(), TypeReference.CLASS_TYPE_PARAMETER, classVisitor::visitTypeAnnotation);
 
         mainElement.getEnclosedElements().forEach(enclosed -> {
             switch (enclosed.getKind()) {
@@ -169,6 +169,14 @@ public class ClassMirrorReader {
         Element element = processingEnv.getTypeUtils().asElement(annotation.getAnnotationType());
         Retention retention = element.getAnnotation(Retention.class);
         return (retention != null) && (retention.value() == RetentionPolicy.RUNTIME);
+    }
+
+    private void readTypeAnnotations(List<? extends TypeParameterElement> elements, int sortType, VisitAnnotationTypeProc visitAnnotationTypeProc) {
+        IntStream.range(0, elements.size()).forEach(index -> {
+            TypeParameterElement element = elements.get(index);
+            int typeRef = TypeReference.newTypeParameterReference(sortType, index).getValue();
+            element.getAnnotationMirrors().forEach(annotation -> readAnnotationValue(annotation, (descriptor, visible) -> visitAnnotationTypeProc.visit(typeRef, null, descriptor, visible)));
+        });
     }
 
     private void readAnnotationTypeValue(AnnotationMirror annotation, int sortType, VisitAnnotationTypeProc visitAnnotationTypeProc) {
