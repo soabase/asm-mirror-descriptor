@@ -21,34 +21,25 @@ import org.objectweb.asm.Type;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 public class MirrorType {
-    private final Type type;
-
-    private static final Map<TypeKind, MirrorType> primitiveMirrorTypes;
+    private static final Map<TypeKind, Type> primitiveMirrorTypes;
     static {
-        Map<TypeKind, MirrorType> map = new HashMap<>();
-        map.put(TypeKind.BOOLEAN, get(Type.BOOLEAN_TYPE));
-        map.put(TypeKind.BYTE, get(Type.BYTE_TYPE));
-        map.put(TypeKind.SHORT, get(Type.SHORT_TYPE));
-        map.put(TypeKind.INT, get(Type.INT_TYPE));
-        map.put(TypeKind.LONG, get(Type.LONG_TYPE));
-        map.put(TypeKind.CHAR, get(Type.CHAR_TYPE));
-        map.put(TypeKind.FLOAT, get(Type.FLOAT_TYPE));
-        map.put(TypeKind.DOUBLE, get(Type.DOUBLE_TYPE));
+        Map<TypeKind, Type> map = new HashMap<>();
+        map.put(TypeKind.BOOLEAN, Type.BOOLEAN_TYPE);
+        map.put(TypeKind.BYTE, Type.BYTE_TYPE);
+        map.put(TypeKind.SHORT, Type.SHORT_TYPE);
+        map.put(TypeKind.INT, Type.INT_TYPE);
+        map.put(TypeKind.LONG, Type.LONG_TYPE);
+        map.put(TypeKind.CHAR, Type.CHAR_TYPE);
+        map.put(TypeKind.FLOAT, Type.FLOAT_TYPE);
+        map.put(TypeKind.DOUBLE, Type.DOUBLE_TYPE);
         primitiveMirrorTypes = Collections.unmodifiableMap(map);
-    }
-
-    public static MirrorType get(Type type) {
-        return new MirrorType(type);
     }
 
     /**
@@ -63,113 +54,42 @@ public class MirrorType {
     }
 
     /**
-     * Returns the signature corresponding to the type mirror.
-     *
-     * @param typeMirror type mirror
-     * @return the signature corresponding to the given class.
-     */
-    public static String getSignature(ProcessingEnvironment processingEnv, TypeMirror typeMirror) {
-        MirrorSignatures mirrorSignatures = new MirrorSignatures(processingEnv);
-        return mirrorSignatures.typeSignature(typeMirror);
-    }
-
-    /**
-     * Returns the {@link MirrorType} corresponding to the given type descriptor or type signature.
+     * Returns the {@link Type} corresponding to the given type descriptor or type signature.
      *
      * @param spec a field or method type descriptor or type signature
-     * @return the {@link MirrorType} corresponding to the given type descriptor or type signature.
+     * @return the {@link Type} corresponding to the given type descriptor or type signature.
      */
-    public static MirrorType getType(String spec) {
-        return get(Type.getType(spec));
+    public static Type getType(String spec) {
+        return Type.getType(spec);
     }
 
     /**
-     * Returns the {@link MirrorType} corresponding to the type mirror.
+     * Returns the {@link Type} corresponding to the type mirror.
      *
      * @param typeMirror type mirror
-     * @return the {@link MirrorType} corresponding to the given type mirror.
+     * @return the {@link Type} corresponding to the given type mirror.
      */
-    public static MirrorType getType(ProcessingEnvironment processingEnv, TypeMirror typeMirror) {
-        return internalGetType(processingEnv, typeMirror, MirrorType::getDescriptor);
-    }
-
-    /**
-     * Returns the {@link MirrorType} corresponding to the type mirror as a signature
-     *
-     * @param typeMirror type mirror
-     * @return the {@link MirrorType} corresponding to the given type mirror as a signature
-     */
-    public static MirrorType getTypeSignature(ProcessingEnvironment processingEnv, TypeMirror typeMirror) {
-        return internalGetType(processingEnv, typeMirror, MirrorType::getSignature);
-    }
-
-    /**
-     * Returns the {@link MirrorType} corresponding to the element
-     *
-     * @param element element
-     * @return the {@link MirrorType} corresponding to the given type element or null if element is invalid
-     */
-    public static MirrorType getType(ProcessingEnvironment processingEnv, ExecutableElement element) {
-        MirrorSignatures mirrorSignatures = new MirrorSignatures(processingEnv);
-        return internalGetType(processingEnv, element, mirrorSignatures::typeDescriptor, mirrorSignatures::methodTypeDescriptor);
-    }
-
-    /**
-     * Returns the {@link MirrorType} corresponding to the element as a signature
-     *
-     * @param element element
-     * @return the {@link MirrorType} corresponding to the given type element as a signature or null if element is invalid
-     */
-    public static MirrorType getTypeSignature(ProcessingEnvironment processingEnv, ExecutableElement element) {
-        MirrorSignatures mirrorSignatures = new MirrorSignatures(processingEnv);
-        return internalGetType(processingEnv, element, mirrorSignatures::classSignature, mirrorSignatures::methodTypeSignature);
-    }
-
-    /**
-     * Returns the {@link MirrorType} corresponding to the return type of the given method.
-     *
-     * @param method a method.
-     * @return the {@link MirrorType} corresponding to the return type of the given method.
-     */
-    public static MirrorType getReturnType(ProcessingEnvironment processingEnv, ExecutableElement method) {
-        MirrorSignatures mirrorSignatures = new MirrorSignatures(processingEnv);
-        return getType(mirrorSignatures.returnTypeDescriptor(method.getReturnType()));
-    }
-
-    /**
-     * Returns the {@link MirrorType} corresponding to the return type of the given method as a signature
-     *
-     * @param method a method.
-     * @return the {@link MirrorType} corresponding to the return type of the given method as a signature
-     */
-    public static MirrorType getReturnTypeSignature(ProcessingEnvironment processingEnv, ExecutableElement method) {
-        MirrorSignatures mirrorSignatures = new MirrorSignatures(processingEnv);
-        return getType(mirrorSignatures.returnTypeSignature(method.getReturnType()));
-    }
-
-    public Type getType() {
-        return type;
-    }
-
-    private static MirrorType internalGetType(ProcessingEnvironment processingEnv, TypeMirror typeMirror, BiFunction<ProcessingEnvironment, TypeMirror, String> proc) {
-        MirrorType primitiveMirrorType = primitiveMirrorTypes.get(typeMirror.getKind());
+    public static Type getType(ProcessingEnvironment processingEnv, TypeMirror typeMirror) {
+        Type primitiveMirrorType = primitiveMirrorTypes.get(typeMirror.getKind());
         if (primitiveMirrorType != null) {
             return primitiveMirrorType;
         }
-        return getType(proc.apply(processingEnv, typeMirror));
+        return getType(getDescriptor(processingEnv, typeMirror));
     }
 
-    @FunctionalInterface
-    private interface MethodTypeDescriptorProc {
-        String apply(TypeMirror[] typeParameters, TypeMirror[] parameters, TypeMirror returnType);
-    }
-
-    private static MirrorType internalGetType(ProcessingEnvironment processingEnv, Element element, Function<TypeMirror, String> classProc, MethodTypeDescriptorProc methodProc) {
+    /**
+     * Returns the {@link Type} corresponding to the element
+     *
+     * @param element element
+     * @return the {@link Type} corresponding to the given type element or null if element is invalid
+     */
+    public static Type getType(ProcessingEnvironment processingEnv, Element element) {
+        MirrorSignatures mirrorSignatures = new MirrorSignatures(processingEnv);
         switch (element.getKind()) {
             case ENUM:
             case CLASS:
             case INTERFACE: {
-                return getType(classProc.apply(element.asType()));
+                return getType(mirrorSignatures.typeDescriptor(element.asType()));
             }
 
             case METHOD:
@@ -181,13 +101,23 @@ public class MirrorType {
                 TypeMirror[] parameters = executableElement.getParameters().stream()
                         .map(Element::asType)
                         .toArray(TypeMirror[]::new);
-                return getType(methodProc.apply(typeParameters, parameters, executableElement.getReturnType()));
+                return getType(mirrorSignatures.methodTypeDescriptor(typeParameters, parameters, executableElement.getReturnType()));
             }
         }
         return null;
     }
 
-    private MirrorType(Type type) {
-        this.type = type;
+    /**
+     * Returns the {@link Type} corresponding to the return type of the given method.
+     *
+     * @param method a method.
+     * @return the {@link Type} corresponding to the return type of the given method.
+     */
+    public static Type getReturnType(ProcessingEnvironment processingEnv, ExecutableElement method) {
+        MirrorSignatures mirrorSignatures = new MirrorSignatures(processingEnv);
+        return getType(mirrorSignatures.returnTypeDescriptor(method.getReturnType()));
+    }
+
+    private MirrorType() {
     }
 }

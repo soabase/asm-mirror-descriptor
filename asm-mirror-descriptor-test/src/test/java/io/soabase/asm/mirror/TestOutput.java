@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.soabase.asm.mirror.test;
+package io.soabase.asm.mirror;
 
 import io.soabase.asm.mirror.util.Util;
 import io.soabase.asm.mirror.test.processor.visitor.TestClassVisitor;
@@ -69,7 +69,7 @@ public class TestOutput {
 
     private void internalTest(Class clazz) {
         String asmGenerated = getAsmGenerated(clazz);
-        String soabaseGenerated = getSoabaseGenerated(clazz);
+        String soabaseGenerated = getSoabaseGenerated(clazz, "test");
         Assert.assertEquals(asmGenerated, soabaseGenerated);
     }
 
@@ -84,9 +84,9 @@ public class TestOutput {
         }
     }
 
-    private String getSoabaseGenerated(Class clazz) {
-        String name = "test/" + clazz.getSimpleName() + ".txt";
-        InputStream inputStream = getClass().getClassLoader().getResourceAsStream(name);
+    static String getSoabaseGenerated(Class clazz, String directory) {
+        String name = directory + "/" + clazz.getSimpleName() + ".txt";
+        InputStream inputStream = clazz.getClassLoader().getResourceAsStream(name);
         if (inputStream == null) {
             throw new AssertionError("Not found: " + name);
         }

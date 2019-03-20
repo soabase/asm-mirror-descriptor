@@ -30,7 +30,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
@@ -42,10 +41,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 
 public class MirrorClassReader {
@@ -54,24 +50,6 @@ public class MirrorClassReader {
     private final MirrorSignatures signatureReader;
     private final int classVersion;
     private final int extraAccessFlags;
-
-    private static final Map<Modifier, Integer> modifierMap;
-    static {
-        Map<Modifier, Integer> map = new HashMap<>();
-        map.put(Modifier.PUBLIC, Opcodes.ACC_PUBLIC);
-        map.put(Modifier.PROTECTED, Opcodes.ACC_PROTECTED);
-        map.put(Modifier.PRIVATE, Opcodes.ACC_PRIVATE);
-        map.put(Modifier.ABSTRACT, Opcodes.ACC_ABSTRACT);
-        map.put(Modifier.DEFAULT, 0);
-        map.put(Modifier.STATIC, Opcodes.ACC_STATIC);
-        map.put(Modifier.FINAL, Opcodes.ACC_FINAL);
-        map.put(Modifier.TRANSIENT, Opcodes.ACC_TRANSIENT);
-        map.put(Modifier.VOLATILE, Opcodes.ACC_VOLATILE);
-        map.put(Modifier.SYNCHRONIZED, Opcodes.ACC_SYNCHRONIZED);
-        map.put(Modifier.NATIVE, Opcodes.ACC_NATIVE);
-        map.put(Modifier.STRICTFP, Opcodes.ACC_STRICT);
-        modifierMap = Collections.unmodifiableMap(map);
-    }
 
     @FunctionalInterface
     private interface VisitAnnotationProc {
@@ -104,14 +82,8 @@ public class MirrorClassReader {
         this.extraAccessFlags = extraAccessFlags;
     }
 
-    public int getAccess(Modifier modifier) {
-        return modifierMap.getOrDefault(modifier, 0);
-    }
-
     public int getAccess() {
-        return mainElement.getModifiers().stream()
-                .mapToInt(this::getAccess)
-                .reduce(0, (left, right) -> left | right);
+        return Util.modifiersToAccessFlags(mainElement.getModifiers());
     }
 
     public String getClassName() {

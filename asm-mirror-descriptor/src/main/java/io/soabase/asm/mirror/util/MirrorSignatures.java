@@ -120,7 +120,7 @@ public class MirrorSignatures {
         type = unwrapType(type);
 
         SignatureWriter writer = new SignatureWriter();
-        internalReturnType(writer, type, mode);
+        internalType(writer, type, mode);
         return writer.toString();
     }
 

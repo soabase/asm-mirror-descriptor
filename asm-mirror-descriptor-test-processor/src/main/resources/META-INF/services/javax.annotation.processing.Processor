@@ -1,2 +1,3 @@
 io.soabase.asm.mirror.test.processor.TestProcessor
 io.soabase.asm.mirror.test.processor.TestGenerator
+io.soabase.asm.mirror.test.processor.TestMirrorTypeProcessor
