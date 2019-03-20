@@ -47,7 +47,7 @@ import java.util.stream.IntStream;
 public class MirrorClassReader {
     private final ProcessingEnvironment processingEnv;
     private final TypeElement mainElement;
-    private final MirrorSignatures signatureReader;
+    private final MirrorSignatures mirrorSignatures;
     private final int classVersion;
     private final int extraAccessFlags;
 
@@ -77,7 +77,7 @@ public class MirrorClassReader {
     public MirrorClassReader(ProcessingEnvironment processingEnv, TypeElement mainElement, int classVersion, int extraAccessFlags) {
         this.processingEnv = processingEnv;
         this.mainElement = mainElement;
-        signatureReader = new MirrorSignatures(processingEnv);
+        mirrorSignatures = new MirrorSignatures(processingEnv);
         this.classVersion = classVersion;
         this.extraAccessFlags = extraAccessFlags;
     }
@@ -91,11 +91,11 @@ public class MirrorClassReader {
     }
 
     public void accept(ClassVisitor classVisitor) {
-        int accessFlags = Util.modifiersToAccessFlags(mainElement.getModifiers()) | extraAccessFlags;
-        String thisClass = Util.toSlash(mainElement.getQualifiedName().toString());
+        int accessFlags = getAccess() | extraAccessFlags;
+        String thisClass = getClassName();
         String superClass = getSuperClass();
         String[] interfaces = getInterfaces();
-        String signature = Util.hasTypeArguments(mainElement) ? signatureReader.classSignature(mainElement.asType()) : null;
+        String signature = Util.hasTypeArguments(mainElement) ? mirrorSignatures.classSignature(mainElement.asType()) : null;
         classVisitor.visit(classVersion, accessFlags, thisClass, signature, superClass, interfaces);
 
         mainElement.getAnnotationMirrors().forEach(annotation -> readAnnotationValue(annotation, classVisitor::visitAnnotation));
@@ -116,7 +116,7 @@ public class MirrorClassReader {
             }
         });
 
-        classVisitor.visitEnd();    // TODO
+        classVisitor.visitEnd();
     }
 
     public void readMethod(ClassVisitor classVisitor, ExecutableElement method) {
@@ -129,8 +129,8 @@ public class MirrorClassReader {
         TypeMirror[] typeParameters = method.getTypeParameters().stream()
                 .map(Element::asType)
                 .toArray(TypeMirror[]::new);
-        String descriptor = signatureReader.methodTypeDescriptor(typeParameters, parameters, method.getReturnType());
-        String signature = Util.hasTypeArguments(method) ? signatureReader.methodTypeSignature(typeParameters, parameters, method.getReturnType()) : null;
+        String descriptor = mirrorSignatures.methodTypeDescriptor(typeParameters, parameters, method.getReturnType());
+        String signature = Util.hasTypeArguments(method) ? mirrorSignatures.methodTypeSignature(typeParameters, parameters, method.getReturnType()) : null;
         String[] exceptions = readExceptions(method);
         MethodVisitor methodVisitor = classVisitor.visitMethod(accessFlags, methodName, descriptor, signature, exceptions);
         if (methodVisitor != null) {
@@ -158,8 +158,8 @@ public class MirrorClassReader {
         int accessFlags = Util.modifiersToAccessFlags(field.getModifiers());
         String name = field.getSimpleName().toString();
         TypeMirror type = field.asType();
-        String descriptor = signatureReader.typeDescriptor(type);
-        String signature = Util.hasTypeArguments(field) ? signatureReader.typeSignature(type) : null;
+        String descriptor = mirrorSignatures.typeDescriptor(type);
+        String signature = Util.hasTypeArguments(field) ? mirrorSignatures.typeSignature(type) : null;
         Object constantValue = field.getConstantValue();
         FieldVisitor fieldVisitor = classVisitor.visitField(accessFlags, name, descriptor, signature, constantValue);
         if (fieldVisitor != null) {
@@ -203,11 +203,11 @@ public class MirrorClassReader {
     }
 
     private void readAnnotationValue(AnnotationMirror annotation, VisitAnnotationProc visitAnnotationProc) {
-        String annotationDescriptor = signatureReader.typeDescriptor(annotation.getAnnotationType());
+        String annotationDescriptor = mirrorSignatures.typeDescriptor(annotation.getAnnotationType());
         AnnotationVisitor annotationVisitor = visitAnnotationProc.visit(annotationDescriptor, isVisibleAnnotation(annotation));
         if (annotationVisitor != null) {
             annotation.getElementValues().forEach((element, annotationValue) -> {
-                AnnotationMirrorValueVisitor mirrorValueVisitor = new AnnotationMirrorValueVisitor(element.getSimpleName().toString(), signatureReader);
+                AnnotationMirrorValueVisitor mirrorValueVisitor = new AnnotationMirrorValueVisitor(element.getSimpleName().toString(), mirrorSignatures);
                 annotationValue.accept(mirrorValueVisitor, annotationVisitor);
             });
             annotationVisitor.visitEnd();
@@ -219,7 +219,7 @@ public class MirrorClassReader {
             return null;
         }
         return method.getThrownTypes().stream()
-                .map(signatureReader::exception)
+                .map(mirrorSignatures::exception)
                 .toArray(String[]::new);
     }
 

@@ -25,6 +25,7 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,6 +67,10 @@ public class Util {
         baseTypes = Collections.unmodifiableMap(map);
     }
 
+    public static int modifiersToAccessFlags(Modifier... modifiers) {
+        return modifiersToAccessFlags(Arrays.asList(modifiers));
+    }
+
     public static int modifiersToAccessFlags(Collection<Modifier> modifiers) {
         int flags = 0;
         for (Modifier modifier : modifiers) {
@@ -92,10 +97,6 @@ public class Util {
 
     public static Character toBaseType(TypeKind kind) {
         return baseTypes.get(kind);
-    }
-
-    public static boolean isObject(ProcessingEnvironment processingEnv, Element element) {
-        return processingEnv.getElementUtils().getTypeElement("java.lang.Object").equals(element);
     }
 
     public static boolean hasTypeArguments(Element element) {
