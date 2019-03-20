@@ -1,2 +1,2 @@
-io.soabase.asm.mirror.descriptor.test.processor.TestProcessor
-io.soabase.asm.mirror.descriptor.test.processor.TestGenerator
+io.soabase.asm.mirror.test.processor.TestProcessor
+io.soabase.asm.mirror.test.processor.TestGenerator
