@@ -5,7 +5,7 @@
     <groupId>io.soabase.asm-mirror-descriptor</groupId>
     <artifactId>asm-mirror-descriptor-parent</artifactId>
     <packaging>pom</packaging>
-    <version>1-SNAPSHOT</version>
+    <version>1</version>
 
     <modules>
         <module>asm-mirror-descriptor</module>
@@ -67,7 +67,7 @@
         <url>https://github.com/soabase/asm-mirror-descriptor</url>
         <connection>scm:git:https://github.com/soabase/asm-mirror-descriptor.git</connection>
         <developerConnection>scm:git:git@github.com:soabase/asm-mirror-descriptor.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>asm-mirror-1</tag>
     </scm>
 
     <issueManagement>
