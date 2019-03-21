@@ -5,7 +5,7 @@
     <groupId>io.soabase.asm-mirror-descriptor</groupId>
     <artifactId>asm-mirror-descriptor-parent</artifactId>
     <packaging>pom</packaging>
-    <version>2-SNAPSHOT</version>
+    <version>1-SNAPSHOT</version>
 
     <modules>
         <module>asm-mirror-descriptor</module>
