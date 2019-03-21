@@ -27,6 +27,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Corollary to {@link Type}. A Java field or method type. This class can be used to make it easier to manipulate type and
+ * method descriptors.
+ */
 public class MirrorType {
     private static final Map<TypeKind, Type> primitiveMirrorTypes;
     static {
@@ -54,10 +58,10 @@ public class MirrorType {
     }
 
     /**
-     * Returns the {@link Type} corresponding to the given type descriptor or type signature.
+     * Returns the {@link Type} corresponding to the given type descriptor.
      *
      * @param spec a field or method type descriptor or type signature
-     * @return the {@link Type} corresponding to the given type descriptor or type signature.
+     * @return the {@link Type} corresponding to the given type descriptor.
      */
     public static Type getType(String spec) {
         return Type.getType(spec);

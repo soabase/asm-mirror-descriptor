@@ -15,7 +15,6 @@
  */
 package io.soabase.asm.mirror.test.processor.visitor;
 
-import io.soabase.asm.mirror.SignatureMirrorType;
 import org.objectweb.asm.Type;
 
 import java.util.Collections;
@@ -31,17 +30,8 @@ public class TypeVisitor {
         accept(label, Collections.singletonList(type));
     }
 
-    public void acceptSignature(String label, SignatureMirrorType type) {
-        acceptSignature(label, Collections.singletonList(type));
-    }
-
     public void accept(String label, List<Type> type) {
         List<String> values = type.stream().map(Type::toString).sorted().collect(Collectors.toList());
-        this.values.put(label, values);
-    }
-
-    public void acceptSignature(String label, List<SignatureMirrorType> type) {
-        List<String> values = type.stream().map(SignatureMirrorType::toString).sorted().collect(Collectors.toList());
         this.values.put(label, values);
     }
 

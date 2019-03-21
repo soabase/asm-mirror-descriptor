@@ -15,215 +15,108 @@
  */
 package io.soabase.asm.mirror;
 
-import io.soabase.asm.mirror.util.AnnotationMirrorValueVisitor;
 import io.soabase.asm.mirror.util.MirrorSignatures;
 import io.soabase.asm.mirror.util.Util;
-import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.TypePath;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.TypeReference;
 
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.IntStream;
 
+/**
+ * Corollary to {@link org.objectweb.asm.ClassReader} but for {@link TypeMirror}s/{@link Element}s.
+ * A parser to make a {@link ClassVisitor} visit a TypeMirror/Element instance. Calls the
+ * appropriate visit methods of a given {@link ClassVisitor} for each field, method and field encountered.
+ * Note: there is not bytecode in mirrors so those visitor methods are never called.
+ */
 public class MirrorClassReader {
-    private final ProcessingEnvironment processingEnv;
     private final TypeElement mainElement;
     private final MirrorSignatures mirrorSignatures;
+    private final MirrorAnnotationReader annotationReader;
+    private final MirrorMethodReader methodReader;
+    private final MirrorFieldReader fieldReader;
     private final int classVersion;
     private final int extraAccessFlags;
 
-    @FunctionalInterface
-    private interface VisitAnnotationProc {
-        AnnotationVisitor visit(String descriptor, boolean visible);
+    /**
+     * New class reader for the given element. {@link ClassVisitor}s will be called
+     * with class version {@link Opcodes#V1_8} and {@link Opcodes#ACC_SUPER} will be
+     * added to the access flags.
+     *
+     * @param processingEnv current processing environment
+     * @param element element
+     */
+    public MirrorClassReader(ProcessingEnvironment processingEnv, TypeElement element) {
+        this(processingEnv, element, Opcodes.V1_8, Opcodes.ACC_SUPER);
     }
 
-    @FunctionalInterface
-    private interface VisitAnnotationTypeProc {
-        AnnotationVisitor visit(int typeRef, TypePath typePath, String descriptor, boolean visible);
-    }
-
-    @FunctionalInterface
-    private interface VisitParameterAnnotationProc {
-        AnnotationVisitor visit(int parameter, String descriptor, boolean visible);
-    }
-
-    public MirrorClassReader(ProcessingEnvironment processingEnv, DeclaredType mainElement) {
-        this(processingEnv, (TypeElement) mainElement.asElement());
-    }
-
-    public MirrorClassReader(ProcessingEnvironment processingEnv, TypeElement mainElement) {
-        this(processingEnv, mainElement, Opcodes.V1_8, Opcodes.ACC_SUPER);
-    }
-
-    public MirrorClassReader(ProcessingEnvironment processingEnv, TypeElement mainElement, int classVersion, int extraAccessFlags) {
-        this.processingEnv = processingEnv;
-        this.mainElement = mainElement;
+    /**
+     * New class reader for the given element. {@link ClassVisitor}s will be called
+     * with the given class version and extraAccessFlags will be
+     * added to the access flags.
+     *
+     * @param processingEnv current processing environment
+     * @param element element
+     * @param classVersion class version to use
+     * @param extraAccessFlags extra access flags to add or 0
+     */
+    public MirrorClassReader(ProcessingEnvironment processingEnv, TypeElement element, int classVersion, int extraAccessFlags) {
+        this.mainElement = element;
         mirrorSignatures = new MirrorSignatures(processingEnv);
+        annotationReader = new MirrorAnnotationReader(processingEnv, mirrorSignatures);
+        methodReader = new MirrorMethodReader(mirrorSignatures, annotationReader);
+        fieldReader = new MirrorFieldReader(mirrorSignatures, annotationReader);
         this.classVersion = classVersion;
         this.extraAccessFlags = extraAccessFlags;
     }
 
+    /**
+     * Returns the class's access flags (see {@link Opcodes}).
+     *
+     * @return the class access flags.
+     */
     public int getAccess() {
         return Util.modifiersToAccessFlags(mainElement.getModifiers());
     }
 
+    /**
+     * Returns the internal name of the class (see {@link Type#getInternalName()}).
+     *
+     * @return the internal class name.
+     */
     public String getClassName() {
         return Util.toSlash(mainElement.getQualifiedName().toString());
     }
 
-    public void accept(ClassVisitor classVisitor) {
-        int accessFlags = getAccess() | extraAccessFlags;
-        String thisClass = getClassName();
-        String superClass = getSuperClass();
-        String[] interfaces = getInterfaces();
-        String signature = Util.hasTypeArguments(mainElement) ? mirrorSignatures.classSignature(mainElement.asType()) : null;
-        classVisitor.visit(classVersion, accessFlags, thisClass, signature, superClass, interfaces);
-
-        mainElement.getAnnotationMirrors().forEach(annotation -> readAnnotationValue(annotation, classVisitor::visitAnnotation));
-        readTypeAnnotations(mainElement.getTypeParameters(), TypeReference.CLASS_TYPE_PARAMETER, classVisitor::visitTypeAnnotation);
-
-        mainElement.getEnclosedElements().forEach(enclosed -> {
-            switch (enclosed.getKind()) {
-                case FIELD: {
-                    readField(classVisitor, (VariableElement) enclosed);
-                    break;
-                }
-
-                case CONSTRUCTOR:
-                case METHOD: {
-                    readMethod(classVisitor, (ExecutableElement) enclosed);
-                    break;
-                }
-            }
-        });
-
-        classVisitor.visitEnd();
-    }
-
-    public void readMethod(ClassVisitor classVisitor, ExecutableElement method) {
-        int accessFlags = Util.modifiersToAccessFlags(method.getModifiers());
-        boolean isConstructor = Util.isConstructor(method);
-        String methodName = method.getSimpleName().toString();
-        TypeMirror[] parameters = method.getParameters().stream()
-                .map(Element::asType)
-                .toArray(TypeMirror[]::new);
-        TypeMirror[] typeParameters = method.getTypeParameters().stream()
-                .map(Element::asType)
-                .toArray(TypeMirror[]::new);
-        String descriptor = mirrorSignatures.methodTypeDescriptor(typeParameters, parameters, method.getReturnType());
-        String signature = Util.hasTypeArguments(method) ? mirrorSignatures.methodTypeSignature(typeParameters, parameters, method.getReturnType()) : null;
-        String[] exceptions = readExceptions(method);
-        MethodVisitor methodVisitor = classVisitor.visitMethod(accessFlags, methodName, descriptor, signature, exceptions);
-        if (methodVisitor != null) {
-            method.getAnnotationMirrors().forEach(annotation -> {
-                readAnnotationValue(annotation, methodVisitor::visitAnnotation);
-                if (isConstructor) {
-                    // javac seems to infer this
-                    if (Arrays.asList(getAnnotationTargets(annotation)).contains(ElementType.TYPE_USE)) {
-                        readAnnotationTypeValue(annotation, TypeReference.METHOD_RETURN, methodVisitor::visitTypeAnnotation);
-                    }
-                }
-            });
-            method.getReturnType().getAnnotationMirrors().forEach(annotation -> readAnnotationTypeValue(annotation, TypeReference.METHOD_RETURN, methodVisitor::visitTypeAnnotation));
-            readTypeAnnotations(method.getTypeParameters(), TypeReference.METHOD_TYPE_PARAMETER, methodVisitor::visitTypeAnnotation);
-
-            IntStream.range(0, method.getParameters().size()).forEach(parameter -> {
-                VariableElement parameterElement = method.getParameters().get(parameter);
-                parameterElement.asType().getAnnotationMirrors().forEach(annotation -> readParameterAnnotationTypeValue(annotation, parameter, TypeReference.METHOD_FORMAL_PARAMETER, methodVisitor::visitTypeAnnotation));
-                parameterElement.getAnnotationMirrors().forEach(annotation -> readParameterAnnotationValue(annotation, parameter, methodVisitor::visitParameterAnnotation));
-            });
-        }
-    }
-
-    public void readField(ClassVisitor classVisitor, VariableElement field) {
-        int accessFlags = Util.modifiersToAccessFlags(field.getModifiers());
-        String name = field.getSimpleName().toString();
-        TypeMirror type = field.asType();
-        String descriptor = mirrorSignatures.typeDescriptor(type);
-        String signature = Util.hasTypeArguments(field) ? mirrorSignatures.typeSignature(type) : null;
-        Object constantValue = field.getConstantValue();
-        FieldVisitor fieldVisitor = classVisitor.visitField(accessFlags, name, descriptor, signature, constantValue);
-        if (fieldVisitor != null) {
-            field.getAnnotationMirrors().forEach(annotation -> readAnnotationValue(annotation, fieldVisitor::visitAnnotation));
-            field.asType().getAnnotationMirrors().forEach(annotation -> readAnnotationTypeValue(annotation, TypeReference.FIELD, fieldVisitor::visitTypeAnnotation));
-        }
-    }
-
-    private ElementType[] getAnnotationTargets(AnnotationMirror annotation) {
-        Element element = processingEnv.getTypeUtils().asElement(annotation.getAnnotationType());
-        Target target = element.getAnnotation(Target.class);
-        return (target != null) ? target.value() : new ElementType[0];
-    }
-
-    private boolean isVisibleAnnotation(AnnotationMirror annotation) {
-        Element element = processingEnv.getTypeUtils().asElement(annotation.getAnnotationType());
-        Retention retention = element.getAnnotation(Retention.class);
-        return (retention != null) && (retention.value() == RetentionPolicy.RUNTIME);
-    }
-
-    private void readTypeAnnotations(List<? extends TypeParameterElement> elements, int sortType, VisitAnnotationTypeProc visitAnnotationTypeProc) {
-        IntStream.range(0, elements.size()).forEach(index -> {
-            TypeParameterElement element = elements.get(index);
-            int typeRef = TypeReference.newTypeParameterReference(sortType, index).getValue();
-            element.getAnnotationMirrors().forEach(annotation -> readAnnotationValue(annotation, (descriptor, visible) -> visitAnnotationTypeProc.visit(typeRef, null, descriptor, visible)));
-        });
-    }
-
-    private void readAnnotationTypeValue(AnnotationMirror annotation, int sortType, VisitAnnotationTypeProc visitAnnotationTypeProc) {
-        int typeRef = TypeReference.newTypeReference(sortType).getValue();
-        readAnnotationValue(annotation, (descriptor, visible) -> visitAnnotationTypeProc.visit(typeRef, null, descriptor, visible));
-    }
-
-    private void readParameterAnnotationValue(AnnotationMirror annotation, int parameter, VisitParameterAnnotationProc visitParameterAnnotationProc) {
-        readAnnotationValue(annotation, (descriptor, visible) -> visitParameterAnnotationProc.visit(parameter, descriptor, visible));
-    }
-
-    private void readParameterAnnotationTypeValue(AnnotationMirror annotation, int parameter, int sortType, VisitAnnotationTypeProc visitAnnotationTypeProc) {
-        int typeRef = TypeReference.newTypeParameterReference(sortType, parameter).getValue();
-        readAnnotationValue(annotation, (descriptor, visible) -> visitAnnotationTypeProc.visit(typeRef, null, descriptor, visible));
-    }
-
-    private void readAnnotationValue(AnnotationMirror annotation, VisitAnnotationProc visitAnnotationProc) {
-        String annotationDescriptor = mirrorSignatures.typeDescriptor(annotation.getAnnotationType());
-        AnnotationVisitor annotationVisitor = visitAnnotationProc.visit(annotationDescriptor, isVisibleAnnotation(annotation));
-        if (annotationVisitor != null) {
-            annotation.getElementValues().forEach((element, annotationValue) -> {
-                AnnotationMirrorValueVisitor mirrorValueVisitor = new AnnotationMirrorValueVisitor(element.getSimpleName().toString(), mirrorSignatures);
-                annotationValue.accept(mirrorValueVisitor, annotationVisitor);
-            });
-            annotationVisitor.visitEnd();
-        }
-    }
-
-    private String[] readExceptions(ExecutableElement method) {
-        if (method.getThrownTypes().isEmpty()) {
+    /**
+     * Returns the internal of name of the super class (see {@link Type#getInternalName()}). For
+     * interfaces, the super class is {@link Object}.
+     *
+     * @return the internal name of the super class
+     */
+    public String getSuperName() {
+        if (mainElement.getSuperclass().getKind() == TypeKind.NONE) {
             return null;
         }
-        return method.getThrownTypes().stream()
-                .map(mirrorSignatures::exception)
-                .toArray(String[]::new);
+        Element element = ((DeclaredType) mainElement.getSuperclass()).asElement();
+        return Util.toSlash(((TypeElement) element).getQualifiedName().toString());
     }
 
-    private String[] getInterfaces() {
+    /**
+     * Returns the internal names of the implemented interfaces (see {@link Type#getInternalName()}).
+     *
+     * @return the internal names of the directly implemented interfaces.
+     */
+    public String[] getInterfaces() {
         return mainElement.getInterfaces().stream()
                 .map(type -> {
                     Element element = ((DeclaredType) type).asElement();
@@ -232,11 +125,38 @@ public class MirrorClassReader {
                 .toArray(String[]::new);
     }
 
-    private String getSuperClass() {
-        if (mainElement.getSuperclass().getKind() == TypeKind.NONE) {
-            return null;
-        }
-        Element element = ((DeclaredType) mainElement.getSuperclass()).asElement();
-        return Util.toSlash(((TypeElement) element).getQualifiedName().toString());
+    /**
+     * Makes the given visitor visit the Mirror/Element passed to the constructor of this
+     * {@link MirrorClassReader}.
+     *
+     * @param classVisitor the visitor that must visit this class.
+     */
+    public void accept(ClassVisitor classVisitor) {
+        int accessFlags = getAccess() | extraAccessFlags;
+        String thisClass = getClassName();
+        String superClass = getSuperName();
+        String[] interfaces = getInterfaces();
+        String signature = Util.hasTypeArguments(mainElement) ? mirrorSignatures.classSignature(mainElement.asType()) : null;
+        classVisitor.visit(classVersion, accessFlags, thisClass, signature, superClass, interfaces);
+
+        mainElement.getAnnotationMirrors().forEach(annotation -> annotationReader.readAnnotationValue(annotation, classVisitor::visitAnnotation));
+        annotationReader.readTypeAnnotations(mainElement.getTypeParameters(), TypeReference.CLASS_TYPE_PARAMETER, classVisitor::visitTypeAnnotation);
+
+        mainElement.getEnclosedElements().forEach(enclosed -> {
+            switch (enclosed.getKind()) {
+                case FIELD: {
+                    fieldReader.readField(classVisitor, (VariableElement) enclosed);
+                    break;
+                }
+
+                case CONSTRUCTOR:
+                case METHOD: {
+                    methodReader.readMethod(classVisitor, (ExecutableElement) enclosed);
+                    break;
+                }
+            }
+        });
+
+        classVisitor.visitEnd();
     }
 }

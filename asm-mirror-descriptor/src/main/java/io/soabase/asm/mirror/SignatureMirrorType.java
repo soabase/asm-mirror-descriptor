@@ -23,14 +23,16 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.TypeMirror;
 
+/**
+ * There is no version of this in the ASM library. This is similar to {@link Type} but
+ * builds parameterized type signatures.
+ */
 public class SignatureMirrorType {
-    private final String signature;
-
     /**
-     * Returns the descriptor corresponding to the type mirror.
+     * Returns the signature corresponding to the type mirror.
      *
      * @param typeMirror type mirror
-     * @return the descriptor corresponding to the given class.
+     * @return the signature corresponding to the given class.
      */
     public static String getSignature(ProcessingEnvironment processingEnv, TypeMirror typeMirror) {
         MirrorSignatures mirrorSignatures = new MirrorSignatures(processingEnv);
@@ -38,38 +40,28 @@ public class SignatureMirrorType {
     }
 
     /**
-     * Returns the {@link SignatureMirrorType} corresponding to the given type descriptor or type signature.
-     *
-     * @param signature a field or method type descriptor or type signature
-     * @return the {@link SignatureMirrorType} corresponding to the given type descriptor or type signature.
-     */
-    public static SignatureMirrorType getType(String signature) {
-        return new SignatureMirrorType(signature);
-    }
-
-    /**
-     * Returns the {@link SignatureMirrorType} corresponding to the type mirror.
+     * Returns the signature corresponding to the type mirror.
      *
      * @param typeMirror type mirror
-     * @return the {@link SignatureMirrorType} corresponding to the given type mirror.
+     * @return the signature corresponding to the given type mirror.
      */
-    public static SignatureMirrorType getType(ProcessingEnvironment processingEnv, TypeMirror typeMirror) {
-        return getType(getSignature(processingEnv, typeMirror));
+    public static String getType(ProcessingEnvironment processingEnv, TypeMirror typeMirror) {
+        return getSignature(processingEnv, typeMirror);
     }
 
     /**
-     * Returns the {@link SignatureMirrorType} corresponding to the element
+     * Returns the signature corresponding to the element
      *
      * @param element element
-     * @return the {@link SignatureMirrorType} corresponding to the given type element or null if element is invalid
+     * @return the signature corresponding to the given type element or null if element is invalid
      */
-    public static SignatureMirrorType getType(ProcessingEnvironment processingEnv, Element element) {
+    public static String getType(ProcessingEnvironment processingEnv, Element element) {
         MirrorSignatures mirrorSignatures = new MirrorSignatures(processingEnv);
         switch (element.getKind()) {
             case ENUM:
             case CLASS:
             case INTERFACE: {
-                return getType(mirrorSignatures.classSignature(element.asType()));
+                return mirrorSignatures.classSignature(element.asType());
             }
 
             case METHOD:
@@ -81,33 +73,23 @@ public class SignatureMirrorType {
                 TypeMirror[] parameters = executableElement.getParameters().stream()
                         .map(Element::asType)
                         .toArray(TypeMirror[]::new);
-                return getType(mirrorSignatures.methodTypeSignature(typeParameters, parameters, executableElement.getReturnType()));
+                return mirrorSignatures.methodTypeSignature(typeParameters, parameters, executableElement.getReturnType());
             }
         }
         return null;
     }
 
     /**
-     * Returns the {@link SignatureMirrorType} corresponding to the return type of the given method.
+     * Returns the signature corresponding to the return type of the given method.
      *
      * @param method a method.
-     * @return the {@link SignatureMirrorType} corresponding to the return type of the given method.
+     * @return the signature corresponding to the return type of the given method.
      */
-    public static SignatureMirrorType getReturnType(ProcessingEnvironment processingEnv, ExecutableElement method) {
+    public static String getReturnType(ProcessingEnvironment processingEnv, ExecutableElement method) {
         MirrorSignatures mirrorSignatures = new MirrorSignatures(processingEnv);
-        return getType(mirrorSignatures.returnTypeSignature(method.getReturnType()));
+        return mirrorSignatures.returnTypeSignature(method.getReturnType());
     }
 
-    public String getSignature() {
-        return signature;
-    }
-
-    @Override
-    public String toString() {
-        return signature;
-    }
-
-    private SignatureMirrorType(String signature) {
-        this.signature = signature;
+    private SignatureMirrorType() {
     }
 }
