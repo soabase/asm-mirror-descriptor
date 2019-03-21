@@ -35,6 +35,61 @@
         <junit-version>4.12</junit-version>
     </properties>
 
+    <name>ASM Mirror Descriptor</name>
+    <description>Addition to OW2 ASM library to support generating descriptors and signatures from TypeMirrors/Elements</description>
+    <url>https://github.com/soabase/asm-mirror-descriptor</url>
+    <inceptionYear>2019</inceptionYear>
+
+    <organization>
+        <name>ASM Mirror Descriptor</name>
+        <url>https://github.com/soabase/asm-mirror-descriptor</url>
+    </organization>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Jordan Zimmerman</name>
+            <email>jordan@jordanzimmerman.com</email>
+            <timezone>-5</timezone>
+            <url>https://github.com/randgalt/</url>
+            <roles>
+                <role>Author</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/soabase/asm-mirror-descriptor</url>
+        <connection>scm:git:https://github.com/soabase/asm-mirror-descriptor.git</connection>
+        <developerConnection>scm:git:git@github.com:soabase/asm-mirror-descriptor.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
+    <issueManagement>
+        <system>Github</system>
+        <url>https://github.com/soabase/asm-mirror-descriptor/issues</url>
+    </issueManagement>
+
+    <distributionManagement>
+        <repository>
+            <id>sonatype-nexus-staging</id>
+            <name>Sonatype Nexus Staging</name>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
+        </repository>
+        <snapshotRepository>
+            <id>sonatype-nexus-snapshots</id>
+            <name>Sonatype Nexus Snapshots</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+    
     <dependencies>
         <dependency>
             <groupId>org.ow2.asm</groupId>
