@@ -19,6 +19,8 @@ import io.soabase.asm.mirror.util.MirrorSignatures;
 import io.soabase.asm.mirror.util.Util;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.TypeReference;
 
 import javax.annotation.processing.ProcessingEnvironment;
@@ -31,10 +33,8 @@ import java.util.Arrays;
 import java.util.stream.IntStream;
 
 /**
- * Corollary to {@link org.objectweb.asm.ClassReader} but for {@link TypeMirror}s/{@link Element}s.
- * A parser to make a {@link ClassVisitor} visit a TypeMirror/Element instance. Calls the
- * appropriate visit methods of a given {@link ClassVisitor} for each field, method and field encountered.
- * Note: there is not bytecode in mirrors so those visitor methods are never called.
+ * Similar to {@link org.objectweb.asm.ClassReader} but only for Mirror methods. Used internally
+ * by {@link MirrorClassReader} but available for reading individual methods if needed.
  */
 public class MirrorMethodReader {
     private final MirrorSignatures mirrorSignatures;
@@ -50,15 +50,44 @@ public class MirrorMethodReader {
     }
 
     @FunctionalInterface
-    public interface VisitMethod {
+    public interface VisitMethodProc {
+        /**
+         * Visits a method of the class. This method <i>must</i> return a new {@link MethodVisitor}
+         * instance (or {@literal null}) each time it is called, i.e., it should not return a previously
+         * returned visitor.
+         *
+         * @param access the method's access flags (see {@link Opcodes}). This parameter also indicates if
+         *     the method is synthetic and/or deprecated.
+         * @param name the method's name.
+         * @param descriptor the method's descriptor (see {@link Type}).
+         * @param signature the method's signature. May be {@literal null} if the method parameters,
+         *     return type and exceptions do not use generic types.
+         * @param exceptions the internal names of the method's exception classes (see {@link
+         *     Type#getInternalName()}). May be {@literal null}.
+         * @return an object to visit the byte code of the method, or {@literal null} if this class
+         *     visitor is not interested in visiting the annotations of this method.
+         */
         MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions);
     }
 
+    /**
+     * Makes the given visitor visit the given method.
+     *
+     * @param classVisitor the visitor that must visit this field. Only {@link ClassVisitor#visitMethod(int, String, String, String, String[])}
+     *                     will be called
+     * @param method the method
+     */
     public void readMethod(ClassVisitor classVisitor, ExecutableElement method) {
         readMethod(classVisitor::visitMethod, method);
     }
 
-    public void readMethod(VisitMethod visitMethod, ExecutableElement method) {
+    /**
+     * Makes the given visitor visit the given method.
+     *
+     * @param visitMethodProc visit method proc
+     * @param method method
+     */
+    public void readMethod(VisitMethodProc visitMethodProc, ExecutableElement method) {
         int accessFlags = Util.modifiersToAccessFlags(method.getModifiers());
         boolean isConstructor = Util.isConstructor(method);
         String methodName = method.getSimpleName().toString();
@@ -71,7 +100,7 @@ public class MirrorMethodReader {
         String descriptor = mirrorSignatures.methodTypeDescriptor(typeParameters, parameters, method.getReturnType());
         String signature = Util.hasTypeArguments(method) ? mirrorSignatures.methodTypeSignature(typeParameters, parameters, method.getReturnType()) : null;
         String[] exceptions = readExceptions(method);
-        MethodVisitor methodVisitor = visitMethod.visitMethod(accessFlags, methodName, descriptor, signature, exceptions);
+        MethodVisitor methodVisitor = visitMethodProc.visitMethod(accessFlags, methodName, descriptor, signature, exceptions);
         if (methodVisitor != null) {
             method.getAnnotationMirrors().forEach(annotation -> {
                 annotationReader.readAnnotationValue(annotation, methodVisitor::visitAnnotation);
