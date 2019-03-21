@@ -22,4 +22,11 @@ Processing](https://docs.oracle.com/javase/7/docs/api/javax/annotation/processin
 The Java spec requires "signatures" for generic descriptors. The ASM library has some internal utilities for generating these.
 The ASM mirror library provides `SignatureMirrorType` to generate generic signatures from TypeMirrors/Elements.
 
+## Usage
 
+Usage is the same as for the ASM library except you pass in a TypeMirror element from an annotation processor instead of a class file. ASM Mirror calls a standard ASM [ClassVistor](https://asm.ow2.io/javadoc/org/objectweb/asm/ClassVisitor.html) E.g.
+
+```java
+MirrorClassReader reader = new MirrorClassReader(processingEnv, element);
+reader.accept(myClassVisitor);  // standard ASM ClassVisitor
+```
