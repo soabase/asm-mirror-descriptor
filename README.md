@@ -1,5 +1,5 @@
 [![Build Status](https://api.travis-ci.org/soabase/asm-mirror-descriptor.svg?branch=master)](https://travis-ci.org/soabase/asm-mirror-descriptor)
-[![Maven Central](https://img.shields.io/maven-central/v/io.soabase.asm-mirror-descriptor/asm-mirror-descriptor-core.svg)](http://search.maven.org/#search%7Cga%7C1%7Casm-mirror-descriptor)
+[![Maven Central](https://img.shields.io/maven-central/v/io.soabase.asm-mirror-descriptor/asm-mirror-descriptor.svg)](http://search.maven.org/#search%7Cga%7C1%7Casm-mirror-descriptor)
 
 # ASM Mirror Descriptor
 Addition to [OW2 ASM library](https://asm.ow2.io) to support generating descriptors and signatures from TypeMirrors/Elements.
