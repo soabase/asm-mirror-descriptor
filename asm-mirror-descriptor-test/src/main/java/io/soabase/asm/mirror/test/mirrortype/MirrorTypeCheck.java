@@ -15,15 +15,21 @@
  */
 package io.soabase.asm.mirror.test.mirrortype;
 
+import io.soabase.asm.mirror.test.processor.DescriptorTest;
 import io.soabase.asm.mirror.test.processor.MirrorTypeTest;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 @MirrorTypeTest
-public class MirrorTypeCheck<T> {
+@DescriptorTest
+public class MirrorTypeCheck<T> extends InputStream implements Observer, Comparable<MirrorTypeCheck<T>> {
     private final List<T> list;
 
     public MirrorTypeCheck() {
@@ -44,5 +50,19 @@ public class MirrorTypeCheck<T> {
 
     public <U> Stream<U> map(Function<T, U> mapper) {
         return list.stream().map(mapper);
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+    }
+
+    @Override
+    public int read() throws IOException {
+        return 0;
+    }
+
+    @Override
+    public int compareTo(MirrorTypeCheck<T> o) {
+        return 0;
     }
 }

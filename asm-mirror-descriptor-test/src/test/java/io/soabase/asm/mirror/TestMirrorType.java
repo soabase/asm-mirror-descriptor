@@ -40,9 +40,11 @@ public class TestMirrorType {
                 .map(Type::getType)
                 .collect(Collectors.toList()));
         typeVisitor.accept("== 03 methods ==", Stream.of(clazz.getDeclaredMethods())
+                .filter(m -> !m.isSynthetic() && !m.isBridge())
                 .map(Type::getType)
                 .collect(Collectors.toList()));
         typeVisitor.accept("== 04 returns ==", Stream.of(clazz.getDeclaredMethods())
+                .filter(m -> !m.isSynthetic() && !m.isBridge())
                 .map(Type::getReturnType)
                 .collect(Collectors.toList()));
 

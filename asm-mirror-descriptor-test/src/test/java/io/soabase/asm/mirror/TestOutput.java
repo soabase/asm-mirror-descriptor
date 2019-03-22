@@ -15,6 +15,7 @@
  */
 package io.soabase.asm.mirror;
 
+import io.soabase.asm.mirror.test.mirrortype.MirrorTypeCheck;
 import io.soabase.asm.mirror.util.Util;
 import io.soabase.asm.mirror.test.processor.visitor.TestClassVisitor;
 import io.soabase.asm.mirror.test.types.AsmGuideTypes;
@@ -65,6 +66,11 @@ public class TestOutput {
     @Test
     public void testComplexExtends() {
         internalTest(ComplexExtends.class);
+    }
+
+    @Test
+    public void testMirrorTypeCheck() {
+        internalTest(MirrorTypeCheck.class);
     }
 
     private void internalTest(Class clazz) {
